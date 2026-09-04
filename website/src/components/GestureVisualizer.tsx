@@ -17,24 +17,34 @@ export function GestureVisualizer({
       </header>
       <dl>
         <div>
+          <dt>Active</dt>
+          <dd data-testid="diagnostic-active-root">{snapshot.activeRoot}</dd>
+        </div>
+        <div>
           <dt>Offset</dt>
-          <dd>{snapshot.offset.toFixed(0)} px</dd>
+          <dd data-testid="diagnostic-offset">
+            {snapshot.offset.toFixed(0)} px
+          </dd>
         </div>
         <div>
           <dt>Progress</dt>
-          <dd>{snapshot.progress.toFixed(2)}</dd>
+          <dd data-testid="diagnostic-progress">
+            {snapshot.progress.toFixed(2)}
+          </dd>
         </div>
         <div>
           <dt>Velocity</dt>
-          <dd>{snapshot.velocity.toFixed(2)} px/ms</dd>
+          <dd data-testid="diagnostic-velocity">
+            {snapshot.velocity.toFixed(2)} px/ms
+          </dd>
         </div>
         <div>
           <dt>Owner</dt>
-          <dd>{snapshot.owner}</dd>
+          <dd data-testid="diagnostic-owner">{snapshot.owner}</dd>
         </div>
         <div>
           <dt>Open</dt>
-          <dd>{snapshot.openState}</dd>
+          <dd data-testid="diagnostic-open-state">{snapshot.openState}</dd>
         </div>
       </dl>
     </section>

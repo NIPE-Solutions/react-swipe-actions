@@ -29,22 +29,16 @@ export const sections = [
 
 export const installCommand = `npm install ${packageName}`
 
-export const canonicalCode = `import { SwipeActions } from '${packageName}'
+export const canonicalCode = `import { SwipeActions as Swipe } from '${packageName}'
 import '${packageName}/core.css'
 
-<SwipeActions.Root>
-  <SwipeActions.Leading>
-    <SwipeActions.Action onAction={archive}>
-      Archive
-    </SwipeActions.Action>
-  </SwipeActions.Leading>
-  <SwipeActions.Content>Quarterly planning</SwipeActions.Content>
-  <SwipeActions.Trailing>
-    <SwipeActions.Action destructive fullSwipe onAction={remove}>
-      Delete
-    </SwipeActions.Action>
-  </SwipeActions.Trailing>
-</SwipeActions.Root>`
+<Swipe.Root>
+  <Swipe.Leading><Swipe.Action onAction={archive}>Archive</Swipe.Action></Swipe.Leading>
+  <Swipe.Content>Quarterly planning</Swipe.Content>
+  <Swipe.Trailing>
+    <Swipe.Action destructive fullSwipe onAction={remove}>Delete</Swipe.Action>
+  </Swipe.Trailing>
+</Swipe.Root>`
 
 export const controlledCode = `import { Root, type SwipeActionsOpenSide } from '${packageName}'
 

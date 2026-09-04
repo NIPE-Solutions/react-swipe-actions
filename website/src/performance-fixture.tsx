@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import {
   Action,
   Content,
@@ -110,22 +110,6 @@ export function installPerformanceInstrumentation() {
 }
 
 export function PerformanceFixture({ rows }: { rows: 100 | 1000 }) {
-  useEffect(() => {
-    let secondFrame = 0
-    const firstFrame = requestAnimationFrame(() => {
-      secondFrame = requestAnimationFrame(() => {
-        window.__swipePerformance__.mountMs =
-          performance.now() - window.__swipePerformance__.mountStarted
-        document.body.setAttribute('data-performance-ready', '')
-      })
-    })
-    return () => {
-      document.body.removeAttribute('data-performance-ready')
-      cancelAnimationFrame(firstFrame)
-      cancelAnimationFrame(secondFrame)
-    }
-  }, [])
-
   const metrics = window.__swipePerformance__
 
   return (
@@ -137,32 +121,7 @@ export function PerformanceFixture({ rows }: { rows: 100 | 1000 }) {
           window.__swipePerformance__.
         </p>
       </header>
-      <dl className="performance-fixture__metrics">
-        <div>
-          <dt>Rows</dt>
-          <dd data-testid="performance-row-count">{rows}</dd>
-        </div>
-        <div>
-          <dt>Mount</dt>
-          <dd>{metrics.mountMs.toFixed(1)} ms</dd>
-        </div>
-        <div>
-          <dt>Resize observers</dt>
-          <dd>{metrics.resizeObservers}</dd>
-        </div>
-        <div>
-          <dt>Global pointer listeners</dt>
-          <dd>{metrics.globalPointerListeners}</dd>
-        </div>
-        <div>
-          <dt>Pending frames</dt>
-          <dd>{metrics.pendingFrames}</dd>
-        </div>
-        <div>
-          <dt>Row renders</dt>
-          <dd>{metrics.rowRenders}</dd>
-        </div>
-      </dl>
+      <PerformanceMetricsPanel rows={rows} />
       <Group>
         <div className="performance-fixture__list">
           {Array.from({ length: rows }, (_, index) => (
@@ -174,6 +133,73 @@ export function PerformanceFixture({ rows }: { rows: 100 | 1000 }) {
   )
 }
 
+function PerformanceMetricsPanel({ rows }: { rows: 100 | 1000 }) {
+  const [snapshot, setSnapshot] = useState(() => ({
+    ...window.__swipePerformance__,
+  }))
+
+  useEffect(() => {
+    let secondFrame = 0
+    const updateSnapshot = () => setSnapshot({ ...window.__swipePerformance__ })
+    window.addEventListener('swipe-performance-update', updateSnapshot)
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        window.__swipePerformance__.mountMs =
+          performance.now() - window.__swipePerformance__.mountStarted
+        updateSnapshot()
+      })
+    })
+    return () => {
+      cancelAnimationFrame(firstFrame)
+      cancelAnimationFrame(secondFrame)
+      window.removeEventListener('swipe-performance-update', updateSnapshot)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (snapshot.mountMs <= 0) return
+    document.body.setAttribute('data-performance-ready', '')
+    return () => document.body.removeAttribute('data-performance-ready')
+  }, [snapshot.mountMs])
+
+  return (
+    <dl className="performance-fixture__metrics">
+      <div>
+        <dt>Rows</dt>
+        <dd data-testid="performance-row-count">{rows}</dd>
+      </div>
+      <div>
+        <dt>Mount</dt>
+        <dd data-testid="performance-mount-ms">
+          {snapshot.mountMs.toFixed(1)} ms
+        </dd>
+      </div>
+      <div>
+        <dt>Resize observers</dt>
+        <dd data-testid="performance-resize-observers">
+          {snapshot.resizeObservers}
+        </dd>
+      </div>
+      <div>
+        <dt>Global pointer listeners</dt>
+        <dd data-testid="performance-global-pointer-listeners">
+          {snapshot.globalPointerListeners}
+        </dd>
+      </div>
+      <div>
+        <dt>Pending frames</dt>
+        <dd data-testid="performance-pending-frames">
+          {snapshot.pendingFrames}
+        </dd>
+      </div>
+      <div>
+        <dt>Row renders</dt>
+        <dd data-testid="performance-row-renders">{snapshot.rowRenders}</dd>
+      </div>
+    </dl>
+  )
+}
+
 function PerformanceRow({
   index,
   metrics,
@@ -182,7 +208,10 @@ function PerformanceRow({
   metrics: PerformanceMetrics
 }) {
   const [openSide, setOpenSide] = useState<'leading' | 'trailing' | null>(null)
-  metrics.rowRenders += 1
+  useLayoutEffect(() => {
+    metrics.rowRenders += 1
+    window.dispatchEvent(new Event('swipe-performance-update'))
+  })
 
   return (
     <Root

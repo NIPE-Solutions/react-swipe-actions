@@ -40,7 +40,7 @@ const messages = [
 export function InboxDemo() {
   const diagnosticHost = useRef<HTMLDivElement>(null)
   const [deleteCount, setDeleteCount] = useState(0)
-  const [status, setStatus] = useState('Swipe a row or use the arrow keys.')
+  const [status, setStatus] = useState('Swipe or use the arrow keys.')
 
   return (
     <aside
@@ -52,7 +52,8 @@ export function InboxDemo() {
         <header className="inbox-demo__bar">
           <div>
             <strong>Inbox</strong>
-            <span>3 messages</span>
+            <span className="demo-count-wide">3 messages</span>
+            <span className="demo-count-compact">Message 1 of 3</span>
           </div>
           <span className="inbox-demo__hint">Drag either edge</span>
         </header>
@@ -61,8 +62,10 @@ export function InboxDemo() {
             {messages.map((message, index) => (
               <Root
                 key={message.subject}
+                className={`demo-row demo-row--${index + 1}`}
                 aria-label={`${message.subject} actions`}
                 data-demo-row=""
+                data-diagnostic-label={`Row ${index + 1}`}
                 data-testid={`demo-row-${index + 1}`}
                 onOpenSideChange={(side) =>
                   setStatus(

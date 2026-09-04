@@ -187,6 +187,7 @@ interface TestRowProps {
   rootProps?: Omit<SwipeActionsRootProps, 'children'>
   children?: ReactNode
   onContentClick?: () => void
+  onContentPointerDown?: (pointerType: string, isTrusted: boolean) => void
   onLeadingAction?: () => void
   onTrailingAction?: () => void
 }
@@ -202,6 +203,7 @@ function TestRow({
   rootProps,
   children,
   onContentClick,
+  onContentPointerDown,
   onLeadingAction,
   onTrailingAction,
 }: TestRowProps) {
@@ -231,6 +233,9 @@ function TestRow({
         data-testid={`${id}-content`}
         className="row-content"
         onClick={onContentClick}
+        onPointerDown={(event) =>
+          onContentPointerDown?.(event.pointerType, event.nativeEvent.isTrusted)
+        }
       >
         <span className="avatar" aria-hidden="true">
           {title.slice(0, 1)}
@@ -267,14 +272,22 @@ function TestRow({
 }
 
 function InboxFixture() {
+  const [archiveCount, setArchiveCount] = useState(0)
   const [deleteCount, setDeleteCount] = useState(0)
   const [childCount, setChildCount] = useState(0)
   const [contentCount, setContentCount] = useState(0)
+  const [lastPointer, setLastPointer] = useState({
+    type: 'none',
+    trusted: false,
+  })
 
   return (
     <main className="fixture fixture--inbox">
       <FixtureHeader title="Inbox" />
       <section className="status-panel" aria-label="Interaction counters">
+        <span>
+          Archive <Counter id="archive-count" value={archiveCount} />
+        </span>
         <span>
           Delete <Counter id="delete-count" value={deleteCount} />
         </span>
@@ -283,6 +296,16 @@ function InboxFixture() {
         </span>
         <span>
           Content <Counter id="content-count" value={contentCount} />
+        </span>
+        <span>
+          Pointer{' '}
+          <output data-testid="last-pointer-type">{lastPointer.type}</output>
+        </span>
+        <span>
+          Trusted{' '}
+          <output data-testid="last-pointer-trusted">
+            {String(lastPointer.trusted)}
+          </output>
         </span>
       </section>
       <Group>
@@ -294,6 +317,10 @@ function InboxFixture() {
             trailingWidths={[64, 96]}
             fullSwipeTrailing
             onContentClick={() => setContentCount((count) => count + 1)}
+            onContentPointerDown={(type, trusted) =>
+              setLastPointer({ type, trusted })
+            }
+            onLeadingAction={() => setArchiveCount((count) => count + 1)}
             onTrailingAction={() => setDeleteCount((count) => count + 1)}
           >
             <div className="row-controls">
@@ -634,6 +661,9 @@ function AccessibilityFixture() {
       ) : (
         row
       )}
+      <button data-testid="after-fixture" type="button">
+        After fixture
+      </button>
     </main>
   )
 }

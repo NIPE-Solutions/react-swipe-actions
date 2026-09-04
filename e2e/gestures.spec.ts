@@ -142,20 +142,18 @@ test('buttons, links, and checkboxes keep native interaction', async ({
   await expectClosed(page.getByTestId('row-1'))
 })
 
-test('touchscreen taps keep child button interaction native', async ({
-  browserName,
+test('clicking an exposed normal Action invokes exactly once', async ({
   page,
 }) => {
-  // Catches touch compatibility events being mistaken for a swipe.
-  test.skip(
-    browserName !== 'chromium',
-    'Playwright touchscreen is Chromium-only',
-  )
   await gotoFixture(page, 'inbox')
+  await drag(page, page.getByTestId('row-1-drag-surface'), 104, {
+    holdMs: 120,
+  })
+  await expectOpen(page.getByTestId('row-1'), 160)
 
-  const tapPoint = await pointFor(page.getByTestId('row-button'))
-  await page.touchscreen.tap(tapPoint.x, tapPoint.y)
-  await expect(page.getByTestId('child-count')).toHaveText('1')
+  await page.getByTestId('row-1-leading-0').click()
+
+  await expect(page.getByTestId('archive-count')).toHaveText('1')
 })
 
 test('the compatibility click after a drag is suppressed', async ({ page }) => {

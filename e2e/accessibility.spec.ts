@@ -10,6 +10,13 @@ async function pressForwardTab(
   await page.keyboard.press(browserName === 'webkit' ? 'Alt+Tab' : 'Tab')
 }
 
+async function focusedTestId(page: import('@playwright/test').Page) {
+  return page.evaluate(
+    () =>
+      (document.activeElement as HTMLElement | null)?.dataset.testid ?? null,
+  )
+}
+
 for (const state of [
   'closed',
   'leading',
@@ -38,19 +45,49 @@ test('closed and open tab order excludes hidden action sides', async ({
   await gotoFixture(page, 'accessibility', { state: 'closed' })
   const root = page.getByTestId('accessibility-row')
 
-  await pressForwardTab(page, browserName)
-  await expect(root).toBeFocused()
-  await pressForwardTab(page, browserName)
-  await expect(page.getByTestId('open-message')).toBeFocused()
+  const closedOrder: Array<string | null> = []
+  for (let step = 0; step < 4; step += 1) {
+    await pressForwardTab(page, browserName)
+    closedOrder.push(await focusedTestId(page))
+  }
+  expect(closedOrder).toEqual([
+    'accessibility-row',
+    'open-message',
+    'message-link',
+    'after-fixture',
+  ])
+  expect(closedOrder).not.toContain('accessibility-row-leading-0')
+  expect(closedOrder).not.toContain('accessibility-row-trailing-0')
 
   await root.focus()
   await page.keyboard.press('ArrowLeft')
   await expect(page.getByTestId('accessibility-row-leading-0')).toBeFocused()
-  await pressForwardTab(page, browserName)
-  await expect(page.getByTestId('open-message')).toBeFocused()
-  await expect(
-    page.getByTestId('accessibility-row-trailing-0'),
-  ).not.toBeFocused()
+  const leadingOpenOrder: Array<string | null> = [await focusedTestId(page)]
+  for (let step = 0; step < 3; step += 1) {
+    await pressForwardTab(page, browserName)
+    leadingOpenOrder.push(await focusedTestId(page))
+  }
+  expect(leadingOpenOrder).toEqual([
+    'accessibility-row-leading-0',
+    'open-message',
+    'message-link',
+    'after-fixture',
+  ])
+  expect(leadingOpenOrder).not.toContain('accessibility-row-trailing-0')
+})
+
+test('keyboard activation invokes an exposed normal Action exactly once', async ({
+  page,
+}) => {
+  await gotoFixture(page, 'inbox')
+  const root = page.getByTestId('row-1')
+  await root.focus()
+  await page.keyboard.press('ArrowLeft')
+  await expect(page.getByTestId('row-1-leading-0')).toBeFocused()
+
+  await page.keyboard.press('Enter')
+
+  await expect(page.getByTestId('archive-count')).toHaveText('1')
 })
 
 test('Escape closes an action-focused row and restores root focus', async ({

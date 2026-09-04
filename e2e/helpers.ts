@@ -1,6 +1,8 @@
 import { expect } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 
+export type TouchDragFidelity = 'trusted' | 'synthetic-pointer-fallback'
+
 export async function gotoFixture(
   page: Page,
   scenario: string,
@@ -52,6 +54,88 @@ export async function drag(
   }
   await page.mouse.up()
   return start
+}
+
+export async function touchDrag(
+  page: Page,
+  browserName: string,
+  locator: Locator,
+  dx: number,
+  dy = 0,
+  steps = 6,
+): Promise<TouchDragFidelity> {
+  const start = await pointFor(locator)
+
+  if (browserName === 'chromium') {
+    const session = await page.context().newCDPSession(page)
+    await session.send('Input.synthesizeScrollGesture', {
+      x: start.x,
+      y: start.y,
+      xDistance: dx,
+      yDistance: dy,
+      gestureSourceType: 'touch',
+      speed: 800,
+    })
+    await session.detach()
+    return 'trusted'
+  }
+
+  // Playwright 1.58 exposes continuous trusted touch input only through
+  // Chromium's CDP. Its cross-browser Touchscreen API is tap-only, so Firefox
+  // and WebKit use Playwright's documented untrusted event fallback for the
+  // component gesture assertion. Native touch scrolling is tested separately
+  // and only where the browser protocol can actually generate it.
+  const pointerId = 41
+  await locator.dispatchEvent('pointerdown', {
+    bubbles: true,
+    button: 0,
+    buttons: 1,
+    clientX: start.x,
+    clientY: start.y,
+    isPrimary: true,
+    pointerId,
+    pointerType: 'touch',
+  })
+  for (let step = 1; step <= steps; step += 1) {
+    await locator.dispatchEvent('pointermove', {
+      bubbles: true,
+      button: -1,
+      buttons: 1,
+      clientX: start.x + (dx * step) / steps,
+      clientY: start.y + (dy * step) / steps,
+      isPrimary: true,
+      pointerId,
+      pointerType: 'touch',
+    })
+  }
+  await locator.dispatchEvent('pointerup', {
+    bubbles: true,
+    button: 0,
+    buttons: 0,
+    clientX: start.x + dx,
+    clientY: start.y + dy,
+    isPrimary: true,
+    pointerId,
+    pointerType: 'touch',
+  })
+  return 'synthetic-pointer-fallback'
+}
+
+export async function chromiumTouchScroll(
+  page: Page,
+  locator: Locator,
+  distance: number,
+) {
+  const start = await pointFor(locator)
+  const session = await page.context().newCDPSession(page)
+  await session.send('Input.synthesizeScrollGesture', {
+    x: start.x,
+    y: start.y,
+    yDistance: -distance,
+    gestureSourceType: 'touch',
+    speed: 800,
+  })
+  await session.detach()
 }
 
 export async function offset(locator: Locator) {

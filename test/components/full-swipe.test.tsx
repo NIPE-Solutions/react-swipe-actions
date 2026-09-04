@@ -181,6 +181,43 @@ describe('SwipeActions full swipe', () => {
     expect(row.onOpenSideChange).toHaveBeenCalledExactlyOnceWith('leading')
   })
 
+  it('gradually expands only the eligible claimant before full-swipe arming', async () => {
+    // Catches expansion waiting for data-active and jumping at the arm threshold.
+    const row = await renderRow()
+
+    dispatchPointer(row.content, 'pointerdown', { clientX: 0, timeStamp: 1 })
+    dispatchPointer(row.content, 'pointermove', { clientX: 160, timeStamp: 10 })
+    frames.advance(16)
+
+    expect(row.leadingAction).not.toHaveAttribute('data-active')
+    expect(row.leadingAction).toHaveAttribute('data-full-swipe-expanding', '')
+    expect(row.leadingAction).toHaveStyle({
+      '--swipe-actions-full-swipe-expansion-width': '160px',
+      '--swipe-actions-full-swipe-expansion-progress': '0.5',
+    })
+    expect(row.trailingAction).not.toHaveAttribute('data-full-swipe-expanding')
+
+    dispatchPointer(row.content, 'pointermove', { clientX: 200, timeStamp: 20 })
+    frames.advance(16)
+
+    expect(row.leadingAction).toHaveStyle({
+      '--swipe-actions-full-swipe-expansion-width': '200px',
+      '--swipe-actions-full-swipe-expansion-progress': '0.625',
+    })
+  })
+
+  it('does not expand an ineligible full-swipe action', async () => {
+    // Catches disabled or opposite-side claimants receiving expansion state.
+    const row = await renderRow({ leadingDisabled: true })
+
+    dispatchPointer(row.content, 'pointerdown', { clientX: 0, timeStamp: 1 })
+    dispatchPointer(row.content, 'pointermove', { clientX: 160, timeStamp: 10 })
+    frames.advance(16)
+
+    expect(row.leadingAction).not.toHaveAttribute('data-full-swipe-expanding')
+    expect(row.trailingAction).not.toHaveAttribute('data-full-swipe-expanding')
+  })
+
   it('arms slow 71% travel, commits once, settles offscreen, and preserves the row', async () => {
     // Catches delayed/duplicate activation, missing expansion state, or library-owned row removal.
     const row = await renderRow()

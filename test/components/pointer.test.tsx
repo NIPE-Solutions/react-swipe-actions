@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs'
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Action, Content, Leading, Root, Trailing } from '../../src'
 import { resizeObserverMock } from '../setup'
+
+const coreCss = readFileSync('src/styles/core.css', 'utf8')
 
 interface PointerInit {
   pointerId?: number
@@ -97,6 +100,12 @@ async function renderRow(
   const content = rendered.container.querySelector<HTMLElement>(
     '[data-testid="content"]',
   )!
+  const leading = rendered.container.querySelector<HTMLElement>(
+    '[data-testid="leading"]',
+  )!
+  const trailing = rendered.container.querySelector<HTMLElement>(
+    '[data-testid="trailing"]',
+  )!
   const captures = new Set<number>()
   const setPointerCapture = vi.fn((pointerId: number) =>
     captures.add(pointerId),
@@ -127,6 +136,9 @@ async function renderRow(
     rendered,
     root,
     content,
+    leading,
+    trailing,
+    leadingAction: leading.querySelector<HTMLButtonElement>('button')!,
     onOpenSideChange,
     setPointerCapture,
     releasePointerCapture,
@@ -200,6 +212,52 @@ describe('SwipeActions pointer gestures', () => {
     expect(row.releasePointerCapture).toHaveBeenCalledExactlyOnceWith(1)
     expect(row.onOpenSideChange).toHaveBeenCalledExactlyOnceWith('leading')
     expect(row.root).toHaveStyle({ '--swipe-actions-offset': '80px' })
+  })
+
+  it('reveals only the moving side while drag and settling keep actions inert', async () => {
+    // Catches CSS that reveals neither side until open or enables an action mid-motion.
+    const style = document.createElement('style')
+    style.textContent = coreCss
+    document.head.append(style)
+    const row = await renderRow()
+
+    try {
+      dispatchPointer(row.content, 'pointerdown', {
+        clientX: 0,
+        clientY: 0,
+        timeStamp: 1,
+      })
+      dispatchPointer(row.content, 'pointermove', {
+        clientX: 45,
+        clientY: 0,
+        timeStamp: 10,
+      })
+      frames.advance(16)
+
+      expect(row.root).toHaveAttribute('data-state', 'dragging')
+      expect(row.root).toHaveAttribute('data-revealing-side', 'leading')
+      expect(getComputedStyle(row.leading).visibility).toBe('visible')
+      expect(getComputedStyle(row.trailing).visibility).toBe('hidden')
+      expect(getComputedStyle(row.leadingAction).pointerEvents).toBe('none')
+
+      dispatchPointer(row.content, 'pointerup', {
+        clientX: 45,
+        clientY: 0,
+        timeStamp: 200,
+      })
+
+      expect(row.root).toHaveAttribute('data-state', 'settling')
+      expect(getComputedStyle(row.leading).visibility).toBe('visible')
+      expect(getComputedStyle(row.leadingAction).pointerEvents).toBe('none')
+
+      frames.advance(400)
+      await act(() => Promise.resolve())
+
+      expect(row.root).toHaveAttribute('data-state', 'open')
+      expect(getComputedStyle(row.leadingAction).pointerEvents).toBe('auto')
+    } finally {
+      style.remove()
+    }
   })
 
   it('permanently yields exact diagonal and vertical sessions to native scrolling', async () => {

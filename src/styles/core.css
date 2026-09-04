@@ -35,6 +35,13 @@
   pointer-events: none;
 }
 
+[data-swipe-actions-root][data-revealing-side='leading']
+  [data-swipe-actions-side][data-side='leading'],
+[data-swipe-actions-root][data-revealing-side='trailing']
+  [data-swipe-actions-side][data-side='trailing'] {
+  visibility: visible;
+}
+
 [data-swipe-actions-root][data-state='open']
   [data-swipe-actions-side][data-active] {
   visibility: visible;
@@ -42,26 +49,25 @@
 }
 
 [data-swipe-actions-root]
-  [data-swipe-actions-action][data-full-swipe][data-active] {
+  [data-swipe-actions-action][data-full-swipe][data-full-swipe-expanding] {
   --swipe-actions-action-width: auto;
   position: absolute;
   inset-block: 0;
   inline-size: var(
-    --swipe-actions-full-swipe-width,
+    --swipe-actions-full-swipe-expansion-width,
     var(--swipe-actions-action-width)
   );
   visibility: visible;
-  pointer-events: auto;
 }
 
 [data-swipe-actions-root]
   [data-swipe-actions-side][data-side='leading']
-  [data-swipe-actions-action][data-full-swipe][data-active] {
+  [data-swipe-actions-action][data-full-swipe][data-full-swipe-expanding] {
   inset-inline-start: 0;
 }
 
 [data-swipe-actions-root]
   [data-swipe-actions-side][data-side='trailing']
-  [data-swipe-actions-action][data-full-swipe][data-active] {
+  [data-swipe-actions-action][data-full-swipe][data-full-swipe-expanding] {
   inset-inline-end: 0;
 }

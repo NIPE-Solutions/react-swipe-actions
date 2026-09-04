@@ -252,9 +252,10 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
           return
         }
         const registration = contentRegistrationsRef.current.get(id)
-        if (registration !== undefined) {
-          registration.width = width
+        if (registration === undefined || registration.width === width) {
+          return
         }
+        registration.width = width
         reconcileMeasurements()
       },
       [reconcileMeasurements],
@@ -325,7 +326,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     const updateSideWidth = useCallback(
       (side: SwipeActionsSide, id: symbol, width: number) => {
         const registration = sideRegistrationsRef.current[side].get(id)
-        if (registration === undefined) {
+        if (registration === undefined || registration.width === width) {
           return
         }
         registration.width = width
@@ -360,7 +361,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     const updateActionWidth = useCallback(
       (side: SwipeActionsSide, id: symbol, width: number) => {
         const entry = actionRegistrationsRef.current[side].get(id)
-        if (entry === undefined) {
+        if (entry === undefined || entry.action.width === width) {
           return
         }
         entry.action.width = width

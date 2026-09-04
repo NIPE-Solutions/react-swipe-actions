@@ -33,6 +33,12 @@
   background: #b91c1c;
 }
 
+[data-swipe-actions-root]
+  [data-swipe-actions-action][data-full-swipe][data-full-swipe-expanding]::before {
+  background: inherit;
+  border-radius: inherit;
+}
+
 [data-swipe-actions-root] [data-swipe-actions-action][data-disabled],
 [data-swipe-actions-root] [data-swipe-actions-action]:disabled {
   opacity: 0.55;

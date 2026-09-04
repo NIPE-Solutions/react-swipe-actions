@@ -210,26 +210,6 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
       [reconcileMeasurements],
     )
 
-    const registerSide = useCallback(
-      (side: SwipeActionsSide, id: symbol) => {
-        if (sideRegistrationsRef.current[side].size > 0) {
-          const componentName = side === 'leading' ? 'Leading' : 'Trailing'
-          warnOnce(
-            `duplicate-${side}-side`,
-            `SwipeActions.Root received more than one SwipeActions.${componentName} container. Keep one SwipeActions.${componentName}; the first mounted container is used.`,
-          )
-        }
-        sideRegistrationsRef.current[side].set(id, { width: 0 })
-        reconcileMeasurements()
-
-        return () => {
-          sideRegistrationsRef.current[side].delete(id)
-          reconcileMeasurements()
-        }
-      },
-      [reconcileMeasurements],
-    )
-
     const validateFullSwipeClaimants = useCallback(() => {
       for (const side of ['leading', 'trailing'] as const) {
         const containerId = sideRegistrationsRef.current[side]
@@ -264,6 +244,26 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
       validateFullSwipeClaimants()
       reconcileMeasurements()
     }, [reconcileMeasurements, validateFullSwipeClaimants])
+
+    const registerSide = useCallback(
+      (side: SwipeActionsSide, id: symbol) => {
+        if (sideRegistrationsRef.current[side].size > 0) {
+          const componentName = side === 'leading' ? 'Leading' : 'Trailing'
+          warnOnce(
+            `duplicate-${side}-side`,
+            `SwipeActions.Root received more than one SwipeActions.${componentName} container. Keep one SwipeActions.${componentName}; the first mounted container is used.`,
+          )
+        }
+        sideRegistrationsRef.current[side].set(id, { width: 0 })
+        configurationChanged()
+
+        return () => {
+          sideRegistrationsRef.current[side].delete(id)
+          configurationChanged()
+        }
+      },
+      [configurationChanged],
+    )
 
     const updateSideWidth = useCallback(
       (side: SwipeActionsSide, id: symbol, width: number) => {

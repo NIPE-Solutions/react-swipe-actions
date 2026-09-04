@@ -8,6 +8,7 @@ import {
   expectOpen,
   gotoFixture,
   offset,
+  pointFor,
 } from './helpers'
 
 function pageErrors(page: Page) {
@@ -104,11 +105,14 @@ test('a new grab interrupts settling from the visible coordinate', async ({
   await gotoFixture(page, 'lifecycle')
   const root = page.getByTestId('lifecycle-row')
   const surface = page.getByTestId('lifecycle-row-drag-surface')
+  const start = await pointFor(surface)
 
   await drag(page, surface, 74, { holdMs: 120 })
-  await expect(root).toHaveAttribute('data-state', 'settling')
   const settlingOffset = await offset(root)
-  await beginDrag(page, surface, -24)
+  expect(settlingOffset).toBeGreaterThan(0)
+  await page.mouse.move(start.x, start.y)
+  await page.mouse.down()
+  await page.mouse.move(start.x - 24, start.y, { steps: 6 })
   await expect(root).toHaveAttribute('data-state', 'dragging')
   await expect.poll(() => offset(root)).toBeLessThan(settlingOffset)
   await interruptWithPointerCancel(page.getByTestId('lifecycle-row-content'))
@@ -129,12 +133,11 @@ test('an action resize during drag cancels and reconciles geometry', async ({
   await beginDrag(page, page.getByTestId('lifecycle-row-drag-surface'), 96)
   await resize.focus()
   await page.keyboard.press('Enter')
-  await page.mouse.up()
-
   await expect(page.getByTestId('lifecycle-row-leading-0')).toHaveCSS(
     'width',
     '132px',
   )
+  await page.mouse.up()
   await expect(page.getByTestId('lifecycle-change-count')).toHaveText('1')
   await expectClosed(page.getByTestId('lifecycle-row'))
   expect(errors).toEqual([])

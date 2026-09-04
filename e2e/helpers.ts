@@ -128,14 +128,35 @@ export async function chromiumTouchScroll(
 ) {
   const start = await pointFor(locator)
   const session = await page.context().newCDPSession(page)
-  await session.send('Input.synthesizeScrollGesture', {
-    x: start.x,
-    y: start.y,
-    yDistance: -distance,
-    gestureSourceType: 'touch',
-    speed: 800,
-  })
-  await session.detach()
+  const touchPoint = (y: number) => [
+    {
+      id: 1,
+      x: start.x,
+      y,
+      radiusX: 1,
+      radiusY: 1,
+      force: 1,
+    },
+  ]
+
+  try {
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: touchPoint(start.y),
+    })
+    for (let step = 1; step <= 8; step += 1) {
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: touchPoint(start.y - (distance * step) / 8),
+      })
+    }
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd',
+      touchPoints: [],
+    })
+  } finally {
+    await session.detach()
+  }
 }
 
 export async function offset(locator: Locator) {

@@ -137,6 +137,10 @@ test('an action resize during drag cancels and reconciles geometry', async ({
     'width',
     '132px',
   )
+  await expect(page.getByTestId('lifecycle-row')).toHaveAttribute(
+    'data-state',
+    'closed',
+  )
   await page.mouse.up()
   await expect(page.getByTestId('lifecycle-change-count')).toHaveText('1')
   await expectClosed(page.getByTestId('lifecycle-row'))

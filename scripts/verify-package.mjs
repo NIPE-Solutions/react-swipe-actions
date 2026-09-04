@@ -11,6 +11,9 @@ const execFileAsync = promisify(execFile)
 const repositoryRoot = path.resolve(import.meta.dirname, '..')
 const fixturesRoot = path.join(repositoryRoot, 'test/package/fixtures')
 const packageName = '@nipe-solutions/react-swipe-actions'
+const approvedPackedFiles = JSON.parse(
+  await readFile(path.join(import.meta.dirname, 'package-files.json'), 'utf8'),
+)
 const expectedRuntimeExports = [
   'Action',
   'Content',
@@ -161,36 +164,22 @@ try {
 }
 
 function validatePackedFiles(files) {
-  const allowedRootFiles = new Set([
-    'CHANGELOG.md',
-    'LICENSE',
-    'README.md',
-    'package.json',
-  ])
-  const unexpected = files.filter(
-    (file) => !file.startsWith('dist/') && !allowedRootFiles.has(file),
-  )
-  assert.deepEqual(
-    unexpected,
-    [],
-    `Unexpected packed files: ${unexpected.join(', ')}`,
-  )
-
-  for (const required of [
-    'LICENSE',
-    'package.json',
-    'dist/index.js',
-    'dist/index.cjs',
-    'dist/index.d.ts',
-    'dist/core.css',
-    'dist/theme.css',
-    'dist/styles.css',
-  ]) {
-    assert.ok(
-      files.includes(required),
-      `Packed artifact is missing ${required}`,
-    )
+  const actual = [...files].sort()
+  const expected = [...approvedPackedFiles].sort()
+  const unexpected = actual.filter((file) => !expected.includes(file))
+  const missing = expected.filter((file) => !actual.includes(file))
+  const messages = []
+  if (unexpected.length > 0) {
+    messages.push(`Unexpected packed files: ${unexpected.join(', ')}`)
   }
+  if (missing.length > 0) {
+    messages.push(`Missing packed files: ${missing.join(', ')}`)
+  }
+  assert.deepEqual(
+    actual,
+    expected,
+    messages.join('\n') || 'Packed file inventory differs from its allowlist',
+  )
 }
 
 function run(command, args, cwd = repositoryRoot) {

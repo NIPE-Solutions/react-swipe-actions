@@ -1,0 +1,12 @@
+[
+  "CHANGELOG.md",
+  "LICENSE",
+  "README.md",
+  "dist/core.css",
+  "dist/index.cjs",
+  "dist/index.d.ts",
+  "dist/index.js",
+  "dist/styles.css",
+  "dist/theme.css",
+  "package.json"
+]

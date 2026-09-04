@@ -1,0 +1,24 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 32px;
+  background: #e2e8f0;
+}
+
+main,
+[data-swipe-actions-root] {
+  inline-size: 320px;
+}
+
+[data-swipe-actions-content] {
+  min-block-size: 64px;
+  padding: 20px;
+}
+
+[data-swipe-actions-action] {
+  inline-size: 96px;
+  block-size: 64px;
+}

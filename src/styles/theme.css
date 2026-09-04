@@ -1,0 +1,51 @@
+[data-swipe-actions-root] {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+[data-swipe-actions-root] [data-swipe-actions-content] {
+  background: #fff;
+  border-radius: 0.5rem;
+}
+
+[data-swipe-actions-root] [data-swipe-actions-side] {
+  gap: 0.25rem;
+  background: #f1f5f9;
+}
+
+[data-swipe-actions-root] [data-swipe-actions-action] {
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: #334155;
+  color: #fff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 20%);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  transition:
+    inline-size 180ms ease-out,
+    background-color 180ms ease-out;
+}
+
+[data-swipe-actions-root] [data-swipe-actions-action][data-destructive] {
+  background: #b91c1c;
+}
+
+[data-swipe-actions-root]
+  [data-swipe-actions-action][data-full-swipe][data-full-swipe-expanding]::before {
+  background: inherit;
+  border-radius: inherit;
+}
+
+[data-swipe-actions-root] [data-swipe-actions-action][data-disabled],
+[data-swipe-actions-root] [data-swipe-actions-action]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-swipe-actions-root] [data-swipe-actions-action] {
+    transition-duration: 0ms;
+  }
+}

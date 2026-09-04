@@ -1,0 +1,87 @@
+[data-swipe-actions-root] {
+  --swipe-actions-offset: 0px;
+  --swipe-actions-progress: 0;
+  --swipe-actions-leading-progress: 0;
+  --swipe-actions-trailing-progress: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-swipe-actions-root] [data-swipe-actions-content] {
+  position: relative;
+  z-index: 1;
+  transform: translate3d(var(--swipe-actions-offset), 0, 0);
+  touch-action: pan-y;
+}
+
+[data-swipe-actions-root] [data-swipe-actions-side] {
+  position: absolute;
+  inset-block: 0;
+  display: flex;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+[data-swipe-actions-root] [data-swipe-actions-side][data-side='leading'] {
+  inset-inline-start: 0;
+}
+
+[data-swipe-actions-root] [data-swipe-actions-side][data-side='trailing'] {
+  inset-inline-end: 0;
+}
+
+[data-swipe-actions-root][data-state='closed'] [data-swipe-actions-side] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+[data-swipe-actions-root][data-revealing-side='leading']
+  [data-swipe-actions-side][data-side='leading'],
+[data-swipe-actions-root][data-revealing-side='trailing']
+  [data-swipe-actions-side][data-side='trailing'] {
+  visibility: visible;
+}
+
+[data-swipe-actions-root][data-state='open']
+  [data-swipe-actions-side][data-active] {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+[data-swipe-actions-root]
+  [data-swipe-actions-action][data-full-swipe][data-full-swipe-expanding] {
+  --swipe-actions-action-width: auto;
+  position: relative;
+  z-index: 0;
+  visibility: visible;
+}
+
+[data-swipe-actions-root]
+  [data-swipe-actions-side][data-side='leading']
+  [data-swipe-actions-action][data-full-swipe][data-full-swipe-expanding]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inline-size: var(
+    --swipe-actions-full-swipe-expansion-width,
+    var(--swipe-actions-action-width)
+  );
+  z-index: -1;
+  pointer-events: none;
+  inset-inline-start: 0;
+}
+
+[data-swipe-actions-root]
+  [data-swipe-actions-side][data-side='trailing']
+  [data-swipe-actions-action][data-full-swipe][data-full-swipe-expanding]::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inline-size: var(
+    --swipe-actions-full-swipe-expansion-width,
+    var(--swipe-actions-action-width)
+  );
+  z-index: -1;
+  pointer-events: none;
+  inset-inline-end: 0;
+}

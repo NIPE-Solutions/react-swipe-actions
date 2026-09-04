@@ -1,11 +1,7 @@
-import {
-  forwardRef,
-  useCallback,
-  useContext,
-  useLayoutEffect,
-  useRef,
-} from 'react'
+import { forwardRef, useCallback, useContext, useEffect, useRef } from 'react'
 import type { SwipeActionsContentProps } from '../public-types'
+import { useIsomorphicLayoutEffect } from '../utils/use-isomorphic-layout-effect'
+import { warnOnce } from '../utils/warn'
 import { RootContext } from './context'
 import { useElementMeasurement, useForwardedElementRef } from './measurement'
 
@@ -31,13 +27,22 @@ export const Content = forwardRef<HTMLDivElement, SwipeActionsContentProps>(
       [updateContentWidth],
     )
 
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       const element = elementRef.current
       if (element !== null) {
         return registerContent?.(idRef.current, element)
       }
     }, [elementRef, registerContent])
     useElementMeasurement(elementRef, reportWidth)
+
+    useEffect(() => {
+      if (root === null) {
+        warnOnce(
+          'content-outside-root',
+          'SwipeActions.Content must be rendered inside SwipeActions.Root. Move the content into a root so gesture registration is available.',
+        )
+      }
+    }, [root])
 
     return (
       <div

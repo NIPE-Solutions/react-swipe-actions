@@ -306,6 +306,49 @@ describe('SwipeActions full swipe', () => {
     },
   )
 
+  it.each([
+    { direction: 'ltr' as const, extension: -13, activates: false },
+    { direction: 'rtl' as const, extension: 13, activates: false },
+    { direction: 'ltr' as const, extension: -48, activates: true },
+    { direction: 'rtl' as const, extension: 48, activates: true },
+  ])(
+    'requires genuine pointer travel from a default-open trailing side in $direction ($extension px)',
+    async ({ direction, extension, activates }) => {
+      // Catches the resting 96px offset counting toward destructive full-swipe travel.
+      const row = await renderRow({
+        direction,
+        rootProps: { defaultOpenSide: 'trailing' },
+      })
+      const sign = direction === 'ltr' ? -1 : 1
+      expect(row.root).toHaveStyle({
+        '--swipe-actions-offset': `${sign * 96}px`,
+      })
+
+      dispatchPointer(row.content, 'pointerdown', {
+        clientX: 0,
+        timeStamp: 0.1,
+      })
+      dispatchPointer(row.content, 'pointermove', {
+        clientX: extension,
+        timeStamp: 1.1,
+      })
+      frames.advance(16)
+      expect(row.root).toHaveStyle({
+        '--swipe-actions-offset': `${sign * (96 + Math.abs(extension))}px`,
+      })
+      dispatchPointer(row.content, 'pointerup', {
+        clientX: extension,
+        timeStamp: 1.2,
+      })
+
+      expect(row.invokeTrailing).toHaveBeenCalledTimes(activates ? 1 : 0)
+      expect(row.root).toHaveAttribute(
+        'data-state',
+        activates ? 'activating' : 'settling',
+      )
+    },
+  )
+
   it('never arms or invokes a disabled claimant', async () => {
     // Catches fullSwipe eligibility bypassing native disabled state.
     const row = await renderRow({ leadingDisabled: true })

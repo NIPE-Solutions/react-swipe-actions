@@ -383,6 +383,12 @@ function Website() {
             </tr>
             <tr>
               <td>
+                <code>--swipe-actions-action-width</code>
+              </td>
+              <td>Measured width written on each action.</td>
+            </tr>
+            <tr>
+              <td>
                 <code>--swipe-actions-full-swipe-progress</code>
               </td>
               <td>Armed action expansion progress.</td>
@@ -430,6 +436,12 @@ function Website() {
             </tr>
             <tr>
               <td>
+                <code>data-full-swipe</code>
+              </td>
+              <td>Present on an action that is eligible for full swipe</td>
+            </tr>
+            <tr>
+              <td>
                 <code>data-full-swipe-expanding</code>
               </td>
               <td>Present on a claimant while expansion geometry is written</td>
@@ -439,6 +451,12 @@ function Website() {
                 <code>data-destructive</code>
               </td>
               <td>Present when destructive is true</td>
+            </tr>
+            <tr>
+              <td>
+                <code>data-disabled</code>
+              </td>
+              <td>Present on a disabled root or action</td>
             </tr>
           </tbody>
         </table>
@@ -463,7 +481,7 @@ function Website() {
       <DocSection
         id="ssr"
         title="SSR"
-        intro="The package imports without a browser global and produces stable closed markup."
+        intro="The package imports without a browser global and preserves configured initial state."
       >
         <CodeBlock code={ssrCode} label="server.tsx" />
         <p>

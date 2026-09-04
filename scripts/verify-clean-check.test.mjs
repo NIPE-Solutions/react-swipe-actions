@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { access, copyFile, mkdir, mkdtemp, rm, symlink } from 'node:fs/promises'
+import {
+  access,
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readdir,
+  rm,
+  symlink,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
@@ -20,12 +28,23 @@ test(
     const snapshot = await mkdtemp(path.join(tmpdir(), 'swipe-clean-check-'))
 
     try {
-      const { stdout: trackedOutput } = await execFileAsync(
-        'git',
-        ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
-        { cwd: repositoryRoot },
-      )
-      const trackedFiles = trackedOutput.split('\0').filter(Boolean)
+      const emptyBrowserCache = path.join(snapshot, 'empty-browser-cache')
+      await mkdir(emptyBrowserCache)
+      const [{ stdout: trackedOutput }, { stdout: deletedOutput }] =
+        await Promise.all([
+          execFileAsync(
+            'git',
+            ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
+            { cwd: repositoryRoot },
+          ),
+          execFileAsync('git', ['ls-files', '--deleted', '-z'], {
+            cwd: repositoryRoot,
+          }),
+        ])
+      const deletedFiles = new Set(deletedOutput.split('\0').filter(Boolean))
+      const trackedFiles = trackedOutput
+        .split('\0')
+        .filter((file) => file && !deletedFiles.has(file))
 
       for (const relativePath of trackedFiles) {
         const destination = path.join(snapshot, relativePath)
@@ -51,6 +70,7 @@ test(
 
       const childEnvironment = {
         ...process.env,
+        PLAYWRIGHT_BROWSERS_PATH: emptyBrowserCache,
         SWIPE_ACTIONS_CLEAN_CHECK_CHILD: '1',
       }
       delete childEnvironment.NODE_TEST_CONTEXT
@@ -63,7 +83,15 @@ test(
 
       assert.equal(stderr, '')
       assert.match(stdout, /Public API verified \(16 exports\)/)
-      assert.match(stdout, /Website verified \(24 sections, 14 examples/)
+      assert.match(
+        stdout,
+        /Website structure verified \(24 sections, 14 examples/,
+      )
+      assert.deepEqual(
+        await readdir(emptyBrowserCache),
+        [],
+        'the browser-free quality gate must not install into its empty cache',
+      )
     } finally {
       await rm(snapshot, { recursive: true, force: true })
     }

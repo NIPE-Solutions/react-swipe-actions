@@ -42,11 +42,11 @@ trusted publisher check.
 
 ## Trusted publishing and provenance
 
-When release automation is introduced, publication belongs only to the
-repository's protected GitHub Actions release workflow. Before enabling it,
+Publication belongs only to the repository's protected GitHub Actions workflow
+at `.github/workflows/release.yml`. Before enabling publication for a release,
 configure npm Trusted Publishing for this package, repository, workflow
-filename, and release environment. The workflow must use an OIDC identity token
-(`id-token: write`), run the checks and artifact inspection first, and invoke
+filename, and release environment. The workflow uses an OIDC identity token
+(`id-token: write`), runs the checks and artifact inspection first, and invokes
 `npm publish --provenance --access public` only after approval.
 
 OIDC trusted publishing means maintainers do not need a long-lived npm token in
@@ -55,5 +55,6 @@ bypass a missing trusted-publisher configuration. Record the workflow run,
 published version, provenance link, tarball inventory, browser evidence, and
 any manual-device checks with the release record.
 
-The current alpha work is not being published. Release automation is introduced
-separately; until then, this guide is a review procedure and dry-run checklist.
+The current alpha work is not being published. Until a maintainer explicitly
+approves the protected release environment and triggers that workflow, this
+guide remains a review procedure and dry-run checklist.

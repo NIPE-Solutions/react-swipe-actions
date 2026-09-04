@@ -5,6 +5,9 @@
 The row waits through a small dead zone before deciding whether a pointer belongs
 to horizontal reveal or vertical scroll. Do not override `touch-action: pan-y`
 from `core.css` unless the surrounding scroller provides an equivalent contract.
+Near-diagonal movement remains pending beyond the dead zone until one axis is
+decisive or the gesture reaches the 18 px decision distance. At that explicit
+decision boundary, a remaining tie is resolved toward vertical scrolling.
 
 Mouse dragging begins only from non-interactive row content. Touch and pen
 gestures may begin on the content surface, while buttons and links continue to
@@ -50,16 +53,11 @@ Do not replace these semantics with color or pointer-event rules alone.
 ## Reduced motion
 
 When the user requests reduced motion, settling writes the target immediately
-without scheduling animation frames. Product CSS should also avoid adding a
-transform transition back onto the content layer in that media query.
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  .message-row [data-swipe-actions-content] {
-    transition-duration: 0ms;
-  }
-}
-```
+without scheduling animation frames. Product CSS must not add a `transform`
+transition to the content layer in any motion preference: direct dragging and
+the internal settle animator both write that coordinate. Other presentation
+transitions should become immediate inside the product's reduced-motion media
+query.
 
 ## Testing checklist
 

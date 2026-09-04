@@ -1,5 +1,6 @@
-import { useCallback, useLayoutEffect, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import type { ForwardedRef, MutableRefObject } from 'react'
+import { useIsomorphicLayoutEffect } from '../utils/use-isomorphic-layout-effect'
 
 export function useForwardedElementRef<T extends HTMLElement>(
   forwardedRef: ForwardedRef<T>,
@@ -26,7 +27,7 @@ export function useElementMeasurement<T extends HTMLElement>(
   elementRef: MutableRefObject<T | null>,
   onWidth: (width: number) => void,
 ) {
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const element = elementRef.current
 
     if (element === null || typeof ResizeObserver === 'undefined') {

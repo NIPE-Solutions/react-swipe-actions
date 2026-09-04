@@ -1,8 +1,14 @@
-import type { SwipeActionsDirection, SwipeActionsSide } from '../public-types'
+import type {
+  SwipeActionsDirection,
+  SwipeActionsOpenSide,
+  SwipeActionsSide,
+} from '../public-types'
 import { sideFromOffset } from '../state/direction'
 
 export interface ResistanceInput {
   offset: number
+  startOffset?: number
+  restingSide?: SwipeActionsOpenSide
   direction: SwipeActionsDirection
   rowWidth: number
   widths: Partial<Record<SwipeActionsSide, number>>
@@ -23,9 +29,34 @@ export function resistedDistance(excess: number, dimension: number): number {
 }
 
 export function applyResistance(input: ResistanceInput): number {
-  const { offset, direction, rowWidth, widths, fullSwipeSides } = input
+  const {
+    direction,
+    rowWidth,
+    widths,
+    fullSwipeSides,
+    startOffset,
+    restingSide,
+  } = input
+  let { offset } = input
   if (!Number.isFinite(offset) || !Number.isFinite(rowWidth) || rowWidth <= 0) {
     return 0
+  }
+
+  const startSide = sideFromOffset(startOffset ?? 0, direction)
+  const nextSide = sideFromOffset(offset, direction)
+  if (
+    restingSide !== null &&
+    restingSide !== undefined &&
+    startSide === restingSide &&
+    nextSide !== null &&
+    nextSide !== restingSide
+  ) {
+    const crossingDistance = Math.min(
+      positiveFinite(widths[restingSide]) * 0.25,
+      rowWidth * 0.15,
+    )
+    offset =
+      Math.sign(offset) * Math.max(0, Math.abs(offset) - crossingDistance)
   }
 
   const side = sideFromOffset(offset, direction)

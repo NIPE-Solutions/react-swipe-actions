@@ -46,6 +46,8 @@ Use attributes rather than package implementation class names:
 
 Action widths are measured individually. Prefer a declared inline size or stable
 padding so label changes do not unexpectedly alter an already open target.
+Do not transition `transform` on `[data-swipe-actions-content]`; the gesture and
+settle engine owns that property on every animation frame.
 
 ## Progress variables
 
@@ -55,11 +57,20 @@ The root exposes offset and reveal progress:
 - `--swipe-actions-progress`
 - `--swipe-actions-leading-progress`
 - `--swipe-actions-trailing-progress`
+- `--swipe-actions-action-width` on each action
+- `--swipe-actions-full-swipe-width` on the active claimant
+- `--swipe-actions-full-swipe-progress` on the active claimant
 
 The active full-swipe claimant also receives expansion width/progress variables.
 These are useful for color or label emphasis tied directly to the gesture. Avoid
 running a permanent animation loop to read them; computed style can be sampled in
 response to pointer or mutation events, as the maintainer website fixture does.
+
+State attributes include `data-state`, `data-side`,
+`data-revealing-side`, `data-active`, `data-full-swipe`,
+`data-full-swipe-expanding`, `data-destructive`, and `data-disabled`. The two
+full-swipe attributes distinguish eligibility from an actively expanding
+claimant; `data-disabled` is present on disabled roots and actions.
 
 ## Scroll containers
 

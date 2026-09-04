@@ -34,6 +34,10 @@ jobs:
           restore-keys: ${{ runner.os }}-playwright-chromium-
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      - name: Build website
+        run: npm run build:website
+      - name: Verify live website and axe
+        run: npm run verify:website:browser
       - name: Test Chromium
         run: npm run test:e2e -- --project=chromium --reporter=line,html
       - name: Upload Chromium failure evidence

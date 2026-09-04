@@ -13,6 +13,20 @@ All notable changes are documented in this file.
 
 ### Fixed
 
+- Require genuine directional pointer travel for velocity-assisted full-swipe
+  activation, including rows that start open, and gate opposite-side reveal
+  after crossing closed.
+- Keep near-diagonal intent pending until a decisive boundary, coordinate groups
+  at committed opening before settle, and preserve interruptible visible motion.
+- Remove theme-level content transform transitions so presentation cannot fight
+  direct gesture and settle writes.
+- Use SSR-safe isomorphic layout effects, verify warning-free React 18 and 19
+  hydration from packed consumers, and warn once when Content or side
+  components are mounted outside Root.
+- Keep the default quality gate browser-free, while running live website and axe
+  checks only after browser installation in browser/release workflows.
+- Ship Ubuntu-specific visual baselines and a single bundled declaration entry,
+  with an isolated packed-tarball Vite consumer.
 - Build the distribution before typechecking package self-imports, and verify
   the complete quality gate in a tracked snapshot with no stale `dist` output.
 - Declared Node globals for the workflow-policy test so the clean lint gate

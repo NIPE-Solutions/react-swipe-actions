@@ -7,6 +7,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   rm,
   writeFile,
 } from 'node:fs/promises'
@@ -52,6 +53,7 @@ const lanes = [
     reactDom: '18.3.1',
     reactTypes: '18.3.31',
     reactDomTypes: '18.3.7',
+    vite: false,
   },
   {
     label: 'React 19.2.8',
@@ -59,6 +61,7 @@ const lanes = [
     reactDom: '19.2.8',
     reactTypes: '19.2.18',
     reactDomTypes: '19.2.7',
+    vite: true,
   },
 ]
 
@@ -102,6 +105,17 @@ try {
       `${JSON.stringify({ private: true, type: 'module' }, null, 2)}\n`,
     )
 
+    const installPackages = [
+      tarballPath,
+      `react@${lane.react}`,
+      `react-dom@${lane.reactDom}`,
+      `@types/react@${lane.reactTypes}`,
+      `@types/react-dom@${lane.reactDomTypes}`,
+      'jsdom@30.0.1',
+    ]
+    if (lane.vite) {
+      installPackages.push('vite@8.2.2')
+    }
     await run(
       'npm',
       [
@@ -112,11 +126,7 @@ try {
         '--no-package-lock',
         '--save-exact',
         '--install-strategy=hoisted',
-        tarballPath,
-        `react@${lane.react}`,
-        `react-dom@${lane.reactDom}`,
-        `@types/react@${lane.reactTypes}`,
-        `@types/react-dom@${lane.reactDomTypes}`,
+        ...installPackages,
       ],
       consumer,
     )
@@ -162,7 +172,11 @@ try {
       ['fixtures/cjs/index.cjs'],
       consumer,
     )
-    await run(process.execPath, ['fixtures/ssr/index.mjs'], consumer)
+    const ssr = await run(
+      process.execPath,
+      ['fixtures/ssr/index.mjs'],
+      consumer,
+    )
     await run(
       process.execPath,
       [
@@ -172,6 +186,29 @@ try {
       ],
       consumer,
     )
+    if (lane.vite) {
+      await run(
+        process.execPath,
+        [
+          'node_modules/vite/bin/vite.js',
+          'build',
+          '--config',
+          'fixtures/vite/vite.config.mjs',
+        ],
+        consumer,
+      )
+      const viteIndex = await readFile(
+        path.join(consumer, 'fixtures/vite/dist/index.html'),
+        'utf8',
+      )
+      assert.match(viteIndex, /<script[^>]+type="module"/)
+      assert.ok(
+        (await readdir(path.join(consumer, 'fixtures/vite/dist/assets'))).some(
+          (file) => file.endsWith('.css'),
+        ),
+        'isolated Vite consumer emits the imported package stylesheet',
+      )
+    }
 
     const laneEsmExports = JSON.parse(esm.stdout.trim())
     const laneCjsExports = JSON.parse(cjs.stdout.trim())
@@ -183,7 +220,15 @@ try {
     cjsExports ??= laneCjsExports
     assert.deepEqual(laneEsmExports, esmExports)
     assert.deepEqual(laneCjsExports, cjsExports)
-    console.log(`${lane.label}: ESM, CJS, types, and SSR passed`)
+    assert.equal(
+      ssr.stderr,
+      '',
+      `${lane.label} SSR render/hydration must not emit warnings`,
+    )
+    assert.match(ssr.stdout, /SSR render and hydration passed/)
+    console.log(
+      `${lane.label}: ESM, CJS, types, SSR${lane.vite ? ', and Vite' : ''} passed`,
+    )
   }
 
   console.log(

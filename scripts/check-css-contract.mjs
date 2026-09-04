@@ -213,6 +213,17 @@ function validateTheme(ast, failures) {
   }
 
   for (const declaration of parsedDeclarations(ast)) {
+    if (
+      (declaration.property === 'transition' ||
+        declaration.property === 'transition-property') &&
+      /(?:^|[\s,])(?:transform|all)(?=$|[\s,])/i.test(
+        generate(declaration.value),
+      )
+    ) {
+      failures.push(
+        `theme transitions transform through ${declaration.property}`,
+      )
+    }
     if (THEME_MECHANICAL_DECLARATIONS.has(declaration.property)) {
       failures.push(
         `theme contains a mechanical declaration: ${declaration.property}`,

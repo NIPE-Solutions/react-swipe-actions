@@ -96,8 +96,8 @@ Use `Group` to close the previously open sibling; keep data, requests, undo,
 and removal in the application. Roots use `leading` and `trailing` state in
 both LTR and RTL. Give each actionable row an accessible label; ArrowLeft and
 ArrowRight open physical edges, Escape closes, and inactive actions leave the
-tab order. Imports are SSR-safe and server rendering starts from closed markup;
-keep server and first-client controlled/default state consistent.
+tab order. Imports are SSR-safe, and server rendering reflects the supplied
+controlled or default open state. Keep server and first-client state consistent.
 
 Support targets the current and previous major Chrome/Chromium, Edge, Firefox,
 and Safari releases, plus modern Chrome Android and Mobile Safari. It requires

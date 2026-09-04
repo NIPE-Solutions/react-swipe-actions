@@ -6,6 +6,7 @@ export type GestureIntent = 'pending' | 'horizontal' | 'vertical'
 
 export interface ReleaseInput {
   offset: number
+  pointerDisplacement: number
   velocity: number
   direction: SwipeActionsDirection
   rowWidth: number
@@ -24,6 +25,7 @@ export interface ReleaseTarget {
 
 const DEFAULT_DEAD_ZONE = 6
 const DEFAULT_DOMINANCE = 1.2
+const DEFAULT_DIAGONAL_DECISION_DISTANCE = 18
 const DEFAULT_OPEN_THRESHOLD = 0.35
 const DEFAULT_FULL_SWIPE_THRESHOLD = 0.7
 const VELOCITY_PROJECTION_MS = 120
@@ -34,6 +36,7 @@ export function classifyIntent(
   dy: number,
   deadZone = DEFAULT_DEAD_ZONE,
   dominance = DEFAULT_DOMINANCE,
+  diagonalDecisionDistance = DEFAULT_DIAGONAL_DECISION_DISTANCE,
 ): GestureIntent {
   if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
     return 'pending'
@@ -43,6 +46,12 @@ export function classifyIntent(
     Number.isFinite(deadZone) && deadZone >= 0 ? deadZone : DEFAULT_DEAD_ZONE
   const safeDominance =
     Number.isFinite(dominance) && dominance > 0 ? dominance : DEFAULT_DOMINANCE
+  const safeDiagonalDecisionDistance = Math.max(
+    safeDeadZone,
+    Number.isFinite(diagonalDecisionDistance) && diagonalDecisionDistance > 0
+      ? diagonalDecisionDistance
+      : DEFAULT_DIAGONAL_DECISION_DISTANCE,
+  )
   const horizontal = Math.abs(dx)
   const vertical = Math.abs(dy)
 
@@ -52,6 +61,14 @@ export function classifyIntent(
 
   if (horizontal > vertical * safeDominance) {
     return 'horizontal'
+  }
+
+  if (vertical > horizontal * safeDominance) {
+    return 'vertical'
+  }
+
+  if (Math.hypot(dx, dy) < safeDiagonalDecisionDistance) {
+    return 'pending'
   }
 
   return 'vertical'
@@ -82,6 +99,10 @@ export function resolveRelease(input: ReleaseInput): ReleaseTarget {
   )
   const sign = physicalSign(side, input.direction)
   const travel = Math.max(0, sign * offset)
+  const pointerDisplacement = Number.isFinite(input.pointerDisplacement)
+    ? input.pointerDisplacement
+    : 0
+  const directionalPointerTravel = Math.max(0, sign * pointerDisplacement)
   const velocity = clampFinite(
     input.velocity,
     -MAX_RELEASE_VELOCITY,
@@ -95,9 +116,7 @@ export function resolveRelease(input: ReleaseInput): ReleaseTarget {
 
   const fullSwipeIsProjected = projectedTravel >= fullSwipeDistance
   const meetsFullSwipeTravel =
-    travel >= fullSwipeDistance ||
-    (normalizedVelocity > 0 &&
-      travel >= rowWidth * FULL_SWIPE_MINIMUM_TRAVEL_RATIO)
+    directionalPointerTravel >= rowWidth * FULL_SWIPE_MINIMUM_TRAVEL_RATIO
   if (hasFullSwipe && fullSwipeIsProjected && meetsFullSwipeTravel) {
     return { kind: 'activate', side, offset: sign * rowWidth }
   }

@@ -2,12 +2,14 @@ import {
   forwardRef,
   useCallback,
   useContext,
-  useLayoutEffect,
+  useEffect,
   useMemo,
   useRef,
 } from 'react'
 import type { SwipeActionsSide, SwipeActionsSideProps } from '../public-types'
 import { setSubtreeInert } from '../utils/dom'
+import { useIsomorphicLayoutEffect } from '../utils/use-isomorphic-layout-effect'
+import { warnOnce } from '../utils/warn'
 import { RootContext, SideContext } from './context'
 import { useElementMeasurement, useForwardedElementRef } from './measurement'
 
@@ -34,7 +36,7 @@ function createSide(side: SwipeActionsSide) {
       [updateSideWidth],
     )
 
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       const element = elementRef.current
       if (element !== null) {
         const unregister = registerSide?.(side, idRef.current, element)
@@ -44,7 +46,7 @@ function createSide(side: SwipeActionsSide) {
         }
       }
     }, [elementRef, registerSide])
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       const element = elementRef.current
       if (element !== null) {
         setSubtreeInert(element, inactive, {
@@ -57,6 +59,16 @@ function createSide(side: SwipeActionsSide) {
       }
     })
     useElementMeasurement(elementRef, reportWidth)
+
+    useEffect(() => {
+      if (root === null) {
+        const componentName = side === 'leading' ? 'Leading' : 'Trailing'
+        warnOnce(
+          `${side}-outside-root`,
+          `SwipeActions.${componentName} must be rendered inside SwipeActions.Root. Move the logical side into a root so it can register and be measured.`,
+        )
+      }
+    }, [root])
 
     return (
       <SideContext.Provider value={context}>

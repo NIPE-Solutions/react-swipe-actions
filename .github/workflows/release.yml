@@ -41,6 +41,8 @@ jobs:
         run: npm run check
       - name: Install browser engines
         run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify live website and axe
+        run: npm run verify:website:browser
       - name: Run complete browser suite
         run: npm run test:e2e
       - name: Verify and preserve release artifact

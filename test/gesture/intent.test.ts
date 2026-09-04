@@ -112,6 +112,31 @@ describe('release target resolution', () => {
     ).toEqual({ kind: 'activate', side: 'leading', offset: 320 })
   })
 
+  it.each([
+    { offset: 220.8, want: { kind: 'open', side: 'leading', offset: 96 } },
+    {
+      offset: 227.2,
+      want: { kind: 'activate', side: 'leading', offset: 320 },
+    },
+  ] as const)(
+    'resolves slow leading travel at offset $offset without rounding the 70% boundary',
+    ({ offset, want }) => {
+      // Catches integer rounding arming 69% or rejecting 71% of a 320px row.
+      expect(
+        resolveRelease({
+          offset,
+          velocity: 0,
+          direction: 'ltr',
+          rowWidth,
+          widths,
+          fullSwipeSides: { leading: true },
+          openThreshold: 0.35,
+          fullSwipeThreshold: 0.7,
+        }),
+      ).toEqual(want)
+    },
+  )
+
   it('does not activate an armed full swipe against a strong closing velocity', () => {
     // Catches distance arming overriding a release that projects past closed.
     expect(
@@ -174,4 +199,42 @@ describe('release target resolution', () => {
       }),
     ).toEqual({ kind: 'open', side: 'leading', offset: -96 })
   })
+
+  it.each([
+    {
+      direction: 'ltr',
+      offset: -227.2,
+      side: 'trailing',
+      target: -320,
+    },
+    {
+      direction: 'rtl',
+      offset: -227.2,
+      side: 'leading',
+      target: -320,
+    },
+    {
+      direction: 'rtl',
+      offset: 227.2,
+      side: 'trailing',
+      target: 320,
+    },
+  ] as const)(
+    'activates logical $side at the signed row width in $direction',
+    ({ direction, offset, side, target }) => {
+      // Catches applying one physical sign to both logical sides or directions.
+      expect(
+        resolveRelease({
+          offset,
+          velocity: 0,
+          direction,
+          rowWidth,
+          widths,
+          fullSwipeSides: { leading: true, trailing: true },
+          openThreshold: 0.35,
+          fullSwipeThreshold: 0.7,
+        }),
+      ).toEqual({ kind: 'activate', side, offset: target })
+    },
+  )
 })

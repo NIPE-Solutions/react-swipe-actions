@@ -4,6 +4,7 @@ import type {
   SwipeActionsOpenSide,
   SwipeActionsSide,
 } from '../public-types'
+import type { GesturePointerEvent } from '../gesture/controller'
 
 export interface GroupRegistry {
   register(id: string, close: () => void): () => void
@@ -17,7 +18,7 @@ export interface RootContextValue {
   openSide: SwipeActionsOpenSide
   openThreshold: number
   fullSwipeThreshold: number
-  registerContent(id: symbol): () => void
+  registerContent(id: symbol, element: HTMLDivElement): () => void
   updateContentWidth(id: symbol, width: number): void
   registerSide(side: SwipeActionsSide, id: symbol): () => void
   updateSideWidth(side: SwipeActionsSide, id: symbol, width: number): void
@@ -30,6 +31,13 @@ export interface RootContextValue {
   updateActionWidth(side: SwipeActionsSide, id: symbol, width: number): void
   configurationChanged(): void
   measurements(): MeasurementSnapshot
+  gesture: {
+    onPointerDown(event: GesturePointerEvent): void
+    onPointerMove(event: GesturePointerEvent): void
+    onPointerUp(event: GesturePointerEvent): void
+    onPointerCancel(event: GesturePointerEvent): void
+    onLostPointerCapture(event: GesturePointerEvent): void
+  }
 }
 
 export interface SideContextValue {

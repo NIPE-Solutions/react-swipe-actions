@@ -56,6 +56,36 @@ export async function drag(
   return start
 }
 
+export async function browserFrameFlick(locator: Locator, dx: number) {
+  await locator.evaluate(async (surface, movement) => {
+    const box = surface.getBoundingClientRect()
+    const startX = box.left + box.width / 2
+    const startY = box.top + box.height / 2
+    const dispatch = (type: string, clientX: number, buttons: number) =>
+      surface.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          button: type === 'pointermove' ? -1 : 0,
+          buttons,
+          cancelable: true,
+          clientX,
+          clientY: startY,
+          isPrimary: true,
+          pointerId: 71,
+          pointerType: 'mouse',
+        }),
+      )
+    const nextFrame = () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+    dispatch('pointerdown', startX, 1)
+    await nextFrame()
+    dispatch('pointermove', startX + movement, 1)
+    await nextFrame()
+    dispatch('pointerup', startX + movement, 0)
+  }, dx)
+}
+
 export async function touchDrag(
   page: Page,
   browserName: string,

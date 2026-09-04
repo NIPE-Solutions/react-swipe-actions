@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 
 import {
   beginDrag,
+  browserFrameFlick,
   drag,
   expectClosed,
   expectOpen,
@@ -46,7 +47,7 @@ test('a short fast flick opens by velocity', async ({ page }) => {
   await gotoFixture(page, 'inbox')
   const root = page.getByTestId('row-1')
 
-  await drag(page, page.getByTestId('row-1-drag-surface'), 48, { steps: 2 })
+  await browserFrameFlick(page.getByTestId('row-1-drag-surface'), 48)
 
   await expectOpen(root, 160)
 })

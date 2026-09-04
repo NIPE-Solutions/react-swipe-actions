@@ -66,10 +66,12 @@ click interceptor.
 
 ## Gesture arbitration
 
-Intent remains pending inside a 6 px radial dead zone. Past it, horizontal
-movement must be greater than 1.2 times vertical movement; otherwise vertical
-scroll owns the interaction. Core CSS sets `touch-action: pan-y` on `Content` so
-the browser can preserve vertical scrolling until horizontal intent wins.
+Intent remains pending inside a 6 px radial dead zone. Past it, one axis must be
+greater than 1.2 times the other to win immediately. Near-diagonal movement
+remains pending until it becomes decisive or reaches the explicit 18 px decision
+distance; only then does the deterministic tie rule give vertical scrolling
+ownership. Core CSS sets `touch-action: pan-y` on `Content` so the browser can
+preserve vertical scrolling until horizontal intent wins.
 
 Only the primary pointer and main button begin a gesture. A second pointer
 cancels the active session. Mouse drags do not begin from buttons, links, inputs,
@@ -105,9 +107,10 @@ travel crosses `sideWidth × openThreshold` (default `0.35`) or a forward flick
 projects across that point after meaningful travel. Backward projected movement
 can close a row even if the raw distance is beyond the threshold.
 
-A full swipe uses `contentWidth × fullSwipeThreshold` (default `0.7`). A flick
-must still travel at least 15% of content width, preventing a tiny movement from
-activating a destructive action solely through velocity.
+A full swipe uses `contentWidth × fullSwipeThreshold` (default `0.7`). Its
+velocity path requires directional pointer displacement of at least 15% of the
+content width. A pre-existing open offset is not counted as pointer travel, so a
+tiny extension from an open row cannot activate a destructive action.
 
 ## Resistance and full swipe
 
@@ -122,6 +125,12 @@ resisted excess = dimension × (1 - 1 / (excess / dimension + 1))
 This keeps overswipe finite and continuous. An enabled claimant is selected from
 the active side; more than one enabled claimant on a side emits a development
 warning and the first is used.
+
+When a gesture starts from an open side and crosses the closed position, the
+opposite side has a bounded gate before it begins revealing. The gate is the
+smaller of 25% of the resting side width and 15% of the row width. This prevents
+the previous open offset from becoming immediate one-to-one travel on the other
+side while preserving deliberate cross-row motion in both LTR and RTL.
 
 ## Settling and reduced motion
 
@@ -138,10 +147,13 @@ attached after mount and removed during cleanup.
 ## Group registry
 
 `Group` holds a stable context registry with a map of root IDs to close callbacks
-and the current open ID. A root registers once and calls `notifyOpen` after it is
-open. The registry closes only the previously open peer. It does not hold message
-objects, render the list, add document listeners, or force every row through a
-shared controlled value.
+and the current open ID. A dragged row claims group ownership when release
+commits to an open target, before settling begins, so the previously open peer
+closes while the successor settles. The same timing applies to a controlled row:
+the peer closes at the committed opening request while the controlled prop stays
+authoritative for the successor. The registry deduplicates repeated ownership
+notifications. It does not hold message objects, render the list, add document
+listeners, or force every row through a shared controlled value.
 
 Unmount removes the callback and clears the current ID when appropriate. Nested
 groups create independent registries; nested swipe roots are not supported.
@@ -182,14 +194,15 @@ authority ambiguous.
 
 Public state is always `leading`, `trailing`, or `null`. In LTR, leading has a
 positive physical offset; in RTL, the signs reverse. An explicit `direction`
-prop wins. Otherwise a layout effect reads computed direction and one
-attribute-only observer watches relevant ancestry for runtime changes.
+prop wins. Otherwise an isomorphic layout effect reads computed direction on the
+client, and one attribute-only observer watches relevant ancestry for runtime
+changes.
 
 Module evaluation does not access `window` or `document`. Server rendering emits
-stable closed markup and initial CSS variables. Measurement, media-query
-subscription, computed direction, observers, and pointer resources begin after
-mount. Applications should keep server and first-client controlled/default state
-consistent to avoid a hydration mismatch.
+the configured controlled or default open state and stable initial CSS variables.
+Measurement, media-query subscription, computed direction, observers, and
+pointer resources begin after mount. Applications should keep server and
+first-client controlled/default state consistent to avoid a hydration mismatch.
 
 ## Styling hooks
 
@@ -199,14 +212,17 @@ Stable hooks are documented CSS variables and attributes, not class names:
 - `--swipe-actions-progress`
 - `--swipe-actions-leading-progress`
 - `--swipe-actions-trailing-progress`
-- full-swipe expansion variables on the claimant
+- `--swipe-actions-action-width` on each measured action
+- `--swipe-actions-full-swipe-width` and
+  `--swipe-actions-full-swipe-progress` on the claimant
 - `data-state`, `data-side`, `data-revealing-side`, `data-active`
 - `data-full-swipe`, `data-full-swipe-expanding`, `data-destructive`,
   `data-disabled`
 
 Consumers may add classes and inline custom properties to public components.
 Core CSS must precede product styling. The optional theme is intentionally
-neutral and replaceable.
+neutral and replaceable. Presentation CSS must not transition `transform` on the
+content layer because JavaScript owns direct drag and settle coordinates.
 
 ## Limitations
 

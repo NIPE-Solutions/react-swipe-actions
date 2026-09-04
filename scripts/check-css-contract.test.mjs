@@ -40,6 +40,36 @@ test('validator rejects a stylesheet that leaks visuals or an unscoped selector'
   }
 })
 
+test('validator rejects theme transition shorthands and properties that interpolate transform writes', async () => {
+  // Catches optional presentation fighting the direct gesture/settle motion engine.
+  const directory = await mkdtemp(join(tmpdir(), 'swipe-actions-css-'))
+  const temporaryPaths = ['core.css', 'theme.css', 'styles.css'].map((name) =>
+    join(directory, name),
+  )
+
+  try {
+    for (const declaration of [
+      'transition: transform 180ms ease-out',
+      'transition-property: opacity, transform',
+    ]) {
+      await rm(directory, { recursive: true, force: true })
+      await cp(sourceDirectory, directory, { recursive: true })
+      await writeFile(
+        join(directory, 'theme.css'),
+        `\n[data-swipe-actions-root] [data-swipe-actions-content] { ${declaration}; }\n`,
+        { flag: 'a' },
+      )
+
+      await assert.rejects(
+        validateCssContract(temporaryPaths),
+        /theme transitions transform/i,
+      )
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('copyStyles creates byte-identical stable CSS artifacts', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'swipe-actions-dist-'))
 

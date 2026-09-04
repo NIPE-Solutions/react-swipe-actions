@@ -35,9 +35,11 @@ export default tseslint.config(
   {
     files: [
       'scripts/verify-website.mjs',
+      'scripts/verify-website-static.mjs',
       'scripts/measure-website-performance.mjs',
       'scripts/verify-clean-check.test.mjs',
       'scripts/verify-workflows.test.mjs',
+      'test/package/fixtures/**/*.{js,mjs,cjs,jsx}',
     ],
     languageOptions: {
       globals: {

@@ -122,7 +122,7 @@ describe('createAnimator', () => {
     expect(animator.isAnimating()).toBe(false)
   })
 
-  it('begins an interrupted animation from the current visual coordinate', () => {
+  it('begins an interrupted animation from the captured visible coordinate and resolves both promises', async () => {
     // Catches restarting from stale logical state instead of the visible position.
     const frames = createFrameLoop()
     let visual = 60
@@ -138,14 +138,22 @@ describe('createAnimator', () => {
       cancelFrame: frames.cancelFrame,
     })
 
-    void animator.animateTo(0)
+    const first = animator.animateTo(0)
     frames.advance(40)
     const visibleDuringFirstSettle = animator.current()
-    void animator.animateTo(100)
+    const second = animator.animateTo(100)
+
+    expect(animator.current()).toBe(visibleDuringFirstSettle)
+    await expect(first).resolves.toEqual({ status: 'canceled' })
+
     frames.advance(10)
 
     expect(visibleDuringFirstSettle).toBeGreaterThan(0)
-    expect(writes.at(-1)).toBeGreaterThan(30)
+    expect(writes.at(-1)).toBeGreaterThan(visibleDuringFirstSettle)
     expect(writes.at(-1)).toBeLessThan(100)
+
+    frames.advance(400)
+    await expect(second).resolves.toEqual({ status: 'completed' })
+    expect(animator.current()).toBe(100)
   })
 })

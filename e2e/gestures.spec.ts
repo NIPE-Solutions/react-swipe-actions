@@ -110,10 +110,10 @@ test('vertical pointer intent leaves the row untranslated and wheel input scroll
   await expect.poll(() => offset(root)).toBe(0)
 })
 
-test('a diagonal gesture biased to vertical never reactivates horizontally', async ({
+test('a near diagonal stays pending until a later horizontal move wins', async ({
   page,
 }) => {
-  // Catches axis ownership changing after a vertical decision.
+  // Catches post-dead-zone diagonal uncertainty being treated as vertical ownership.
   await gotoFixture(page, 'inbox')
   const root = page.getByTestId('row-1')
   const surface = page.getByTestId('row-1-drag-surface')
@@ -121,8 +121,27 @@ test('a diagonal gesture biased to vertical never reactivates horizontally', asy
 
   await page.mouse.move(start.x, start.y)
   await page.mouse.down()
-  await page.mouse.move(start.x + 12, start.y + 18)
-  await page.mouse.move(start.x + 130, start.y + 20)
+  await page.mouse.move(start.x + 10, start.y + 10)
+  await expect.poll(() => offset(root)).toBe(0)
+  await page.mouse.move(start.x + 130, start.y + 11)
+  await page.mouse.up()
+
+  await expectOpen(root, 160)
+})
+
+test('a diagonal tie at the decision boundary yields permanently to vertical', async ({
+  page,
+}) => {
+  // Catches the deterministic tie condition reactivating as a horizontal drag.
+  await gotoFixture(page, 'inbox')
+  const root = page.getByTestId('row-1')
+  const surface = page.getByTestId('row-1-drag-surface')
+  const start = await pointFor(surface)
+
+  await page.mouse.move(start.x, start.y)
+  await page.mouse.down()
+  await page.mouse.move(start.x + 13, start.y + 13)
+  await page.mouse.move(start.x + 130, start.y + 14)
   await page.mouse.up()
 
   await expectClosed(root)

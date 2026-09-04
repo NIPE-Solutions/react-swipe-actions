@@ -1,13 +1,7 @@
-import {
-  forwardRef,
-  useCallback,
-  useContext,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react'
+import { forwardRef, useCallback, useContext, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { SwipeActionsActionProps } from '../public-types'
+import { useIsomorphicLayoutEffect } from '../utils/use-isomorphic-layout-effect'
 import { warnOnce } from '../utils/warn'
 import { RootContext, SideContext } from './context'
 import { useElementMeasurement, useForwardedElementRef } from './measurement'
@@ -64,7 +58,7 @@ export const Action = forwardRef<HTMLButtonElement, SwipeActionsActionProps>(
       [side, updateActionWidth],
     )
 
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       const element = elementRef.current
       if (
         side === undefined ||
@@ -84,13 +78,13 @@ export const Action = forwardRef<HTMLButtonElement, SwipeActionsActionProps>(
       )
     }, [registerAction, side, sideContext])
 
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       configurationChanged?.()
     }, [configurationChanged, disabled, fullSwipe])
 
     useElementMeasurement(elementRef, reportWidth)
 
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       if (root === null && sideContext === null) {
         warnOnce(
           'action-outside-root-and-side',

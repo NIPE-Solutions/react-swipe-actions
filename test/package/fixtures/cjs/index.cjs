@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-/* global require */
 const assert = require('node:assert/strict')
 const console = require('node:console')
 const { accessSync } = require('node:fs')

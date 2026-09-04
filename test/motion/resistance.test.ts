@@ -60,4 +60,71 @@ describe('non-linear overswipe resistance', () => {
       }),
     ).toBe(480)
   })
+
+  it.each([
+    {
+      direction: 'ltr' as const,
+      restingSide: 'leading' as const,
+      startOffset: 96,
+      insideOffset: -12,
+      beyondOffset: -32,
+      beyondWant: -8,
+    },
+    {
+      direction: 'ltr' as const,
+      restingSide: 'trailing' as const,
+      startOffset: -96,
+      insideOffset: 12,
+      beyondOffset: 32,
+      beyondWant: 8,
+    },
+    {
+      direction: 'rtl' as const,
+      restingSide: 'leading' as const,
+      startOffset: -96,
+      insideOffset: 12,
+      beyondOffset: 32,
+      beyondWant: 8,
+    },
+    {
+      direction: 'rtl' as const,
+      restingSide: 'trailing' as const,
+      startOffset: 96,
+      insideOffset: -12,
+      beyondOffset: -32,
+      beyondWant: -8,
+    },
+  ])(
+    'gates opposite-side reveal after crossing $restingSide in $direction',
+    ({
+      direction,
+      restingSide,
+      startOffset,
+      insideOffset,
+      beyondOffset,
+      beyondWant,
+    }) => {
+      // Catches crossing closed from an open row revealing the opposite side one-to-one.
+      expect(
+        applyResistance({
+          offset: insideOffset,
+          startOffset,
+          restingSide,
+          direction,
+          rowWidth,
+          widths,
+        }),
+      ).toBe(0)
+      expect(
+        applyResistance({
+          offset: beyondOffset,
+          startOffset,
+          restingSide,
+          direction,
+          rowWidth,
+          widths,
+        }),
+      ).toBe(beyondWant)
+    },
+  )
 })

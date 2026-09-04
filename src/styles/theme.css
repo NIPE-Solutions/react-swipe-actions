@@ -5,7 +5,6 @@
 [data-swipe-actions-root] [data-swipe-actions-content] {
   background: #fff;
   border-radius: 0.5rem;
-  transition: transform 180ms ease-out;
 }
 
 [data-swipe-actions-root] [data-swipe-actions-side] {
@@ -46,7 +45,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-swipe-actions-root] [data-swipe-actions-content],
   [data-swipe-actions-root] [data-swipe-actions-action] {
     transition-duration: 0ms;
   }

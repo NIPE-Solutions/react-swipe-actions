@@ -84,9 +84,12 @@ describe('SwipeActions actions and configuration', () => {
       </Leading>,
     )
 
-    await waitFor(() => expect(console.warn).toHaveBeenCalledOnce())
+    await waitFor(() => expect(console.warn).toHaveBeenCalledTimes(2))
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringMatching(/Action.*inside.*Root.*Move.*Leading.*root/i),
+    )
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/Leading.*inside.*Root.*Move/i),
     )
   })
 

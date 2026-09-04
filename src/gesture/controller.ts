@@ -53,6 +53,7 @@ export interface GestureControllerOptions {
   getOpenSide(): SwipeActionsOpenSide
   getOpenThreshold(): number
   getFullSwipeThreshold(): number
+  beginOpening(side: SwipeActionsSide): void
   requestOpenSide(side: SwipeActionsOpenSide): SwipeActionsOpenSide
   setPhase(phase: GesturePhase): void
   setArmedSide(side: SwipeActionsSide | null): void
@@ -77,6 +78,7 @@ interface PointerSession {
   startY: number
   startTime: number
   startOffset: number
+  startOpenSide: SwipeActionsOpenSide
   pendingOffset: number
   owner: 'pending' | 'horizontal' | 'vertical'
   captured: boolean
@@ -264,6 +266,7 @@ export function createGestureController(
     )
     const target = resolveRelease({
       offset: active.pendingOffset,
+      pointerDisplacement: event.clientX - active.startX,
       velocity,
       direction: options.motion.direction(),
       rowWidth: snapshot.contentWidth,
@@ -279,6 +282,9 @@ export function createGestureController(
       fullSwipeThreshold: options.getFullSwipeThreshold(),
     })
     const generation = ++settleGeneration
+    if (target.kind === 'open' && target.side !== null) {
+      options.beginOpening(target.side)
+    }
     options.setPhase(target.kind === 'activate' ? 'activating' : 'settling')
     if (target.kind === 'activate' && target.side !== null) {
       options.setArmedSide(target.side)
@@ -350,6 +356,7 @@ export function createGestureController(
         startY: event.clientY,
         startTime: event.timeStamp,
         startOffset,
+        startOpenSide: options.getOpenSide(),
         pendingOffset: startOffset,
         owner: 'pending',
         captured: false,
@@ -416,6 +423,8 @@ export function createGestureController(
       const snapshot = options.motion.measurements()
       active.pendingOffset = applyResistance({
         offset: active.startOffset + dx,
+        startOffset: active.startOffset,
+        restingSide: active.startOpenSide,
         direction: options.motion.direction(),
         rowWidth: snapshot.contentWidth,
         widths: {

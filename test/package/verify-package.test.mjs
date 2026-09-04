@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
@@ -9,6 +9,19 @@ import test from 'node:test'
 
 const execFileAsync = promisify(execFile)
 const repositoryRoot = path.resolve(import.meta.dirname, '../..')
+
+test('distribution bundles declarations into its public entrypoint', async () => {
+  // Catches private implementation declarations leaking into the packed artifact.
+  const declarations = (await readdir('dist', { recursive: true }))
+    .filter((file) => file.endsWith('.d.ts'))
+    .sort()
+
+  assert.deepEqual(declarations, ['index.d.ts'])
+  assert.doesNotMatch(
+    await readFile(path.join(repositoryRoot, 'dist/index.d.ts'), 'utf8'),
+    /(?:from\s+|import\()['"]\.\//,
+  )
+})
 
 test('package metadata points to the approved GitHub repository', async () => {
   const { default: packageJson } = await import('../../package.json', {
@@ -31,6 +44,40 @@ test('interaction guide documents RTL keyboard mapping from physical edges', asy
     guide,
     /In RTL,\s+ArrowLeft therefore opens `trailing`, while ArrowRight opens `leading`\./,
   )
+})
+
+test('public documentation matches the SSR and release automation contracts', async () => {
+  const [readme, architecture, releasing] = await Promise.all([
+    readFile(path.join(repositoryRoot, 'README.md'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'docs/architecture.md'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'docs/RELEASING.md'), 'utf8'),
+  ])
+
+  assert.match(
+    readme,
+    /server rendering reflects the supplied\s+controlled or default open state/i,
+  )
+  assert.match(
+    architecture,
+    /server rendering emits\s+the configured controlled or default open state/i,
+  )
+  assert.doesNotMatch(releasing, /when release automation is introduced/i)
+  assert.match(releasing, /\.github\/workflows\/release\.yml/)
+})
+
+test('website documents every stable CSS hook named by the design', async () => {
+  const source = await readFile(
+    path.join(repositoryRoot, 'website/src/main.tsx'),
+    'utf8',
+  )
+
+  for (const hook of [
+    '--swipe-actions-action-width',
+    'data-full-swipe',
+    'data-disabled',
+  ]) {
+    assert.match(source, new RegExp(hook))
+  }
 })
 
 test('public API checker rejects an exported gesture internal', async () => {
@@ -133,7 +180,7 @@ test('packed package passes isolated React 18 and React 19 consumers', async () 
   )
 
   assert.equal(stderr, '')
-  assert.match(stdout, /React 18\.3\.1: ESM, CJS, types, and SSR passed/)
-  assert.match(stdout, /React 19\.2\.8: ESM, CJS, types, and SSR passed/)
+  assert.match(stdout, /React 18\.3\.1: ESM, CJS, types, SSR passed/)
+  assert.match(stdout, /React 19\.2\.8: ESM, CJS, types, SSR, and Vite passed/)
   assert.match(stdout, /Packed package verification passed/)
 })

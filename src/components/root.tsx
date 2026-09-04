@@ -5,7 +5,6 @@ import {
   useEffect,
   useId,
   useImperativeHandle,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -28,6 +27,7 @@ import {
   isKeyboardInteractiveTarget,
 } from '../utils/dom'
 import { warnOnce } from '../utils/warn'
+import { useIsomorphicLayoutEffect } from '../utils/use-isomorphic-layout-effect'
 import { GroupContext, RootContext } from './context'
 import type {
   MeasurementSnapshot,
@@ -93,6 +93,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
       useState<SwipeActionsDirection>(htmlDirection === 'rtl' ? 'rtl' : 'ltr')
     const resolvedDirection = direction ?? computedDirection
     const group = useContext(GroupContext)
+    const groupRef = useRef(group)
     const groupId = useId()
     const elementRef = useRef<HTMLDivElement>(null)
     const disabledRef = useRef(disabled)
@@ -139,6 +140,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     const fullSwipeThresholdRef = useRef(fullSwipeThreshold)
 
     disabledRef.current = disabled
+    groupRef.current = group
     controlledRef.current = controlledOpenSide !== undefined
     openSideRef.current = openSide
     directionRef.current = resolvedDirection
@@ -194,6 +196,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         getOpenSide: () => openSideRef.current,
         getOpenThreshold: () => openThresholdRef.current,
         getFullSwipeThreshold: () => fullSwipeThresholdRef.current,
+        beginOpening: () => groupRef.current?.notifyOpen(groupId),
         requestOpenSide: (side) => {
           requestOpenSideRef.current(side)
           return controlledRef.current ? openSideRef.current : side
@@ -406,7 +409,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
       }
     }, [thresholdsAreValid])
 
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       mountedRef.current = true
       reconcileMeasurements()
 
@@ -416,7 +419,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
       }
     }, [reconcileMeasurements])
 
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       const element = elementRef.current
       if (element === null || direction !== undefined) {
         return
@@ -456,7 +459,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
       return () => observer.disconnect()
     }, [direction])
 
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       const view = elementRef.current?.ownerDocument.defaultView
       if (
         view === null ||
@@ -483,11 +486,11 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
       return () => mediaQuery.removeListener(reconcileMotionPreference)
     }, [])
 
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       reconcileMeasurements()
     }, [disabled, openSide, reconcileMeasurements, resolvedDirection])
 
-    useLayoutEffect(() => {
+    useIsomorphicLayoutEffect(() => {
       const element = elementRef.current
       if (element === null) {
         return

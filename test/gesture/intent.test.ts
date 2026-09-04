@@ -6,7 +6,9 @@ describe('axis intent arbitration', () => {
   it.each([
     { dx: 4, dy: 3, deadZone: 6, dominance: 1.2, want: 'pending' },
     { dx: 12, dy: 4, deadZone: 6, dominance: 1.2, want: 'horizontal' },
-    { dx: 10, dy: 10, deadZone: 6, dominance: 1.2, want: 'vertical' },
+    { dx: 4, dy: 12, deadZone: 6, dominance: 1.2, want: 'vertical' },
+    { dx: 10, dy: 9, deadZone: 6, dominance: 1.2, want: 'pending' },
+    { dx: 13, dy: 13, deadZone: 6, dominance: 1.2, want: 'vertical' },
   ] as const)(
     'classifies dx=$dx and dy=$dy as $want',
     ({ dx, dy, deadZone, dominance, want }) => {
@@ -25,6 +27,7 @@ describe('release target resolution', () => {
     expect(
       resolveRelease({
         offset: 40,
+        pointerDisplacement: 40,
         velocity: 0,
         direction: 'ltr',
         rowWidth,
@@ -40,6 +43,7 @@ describe('release target resolution', () => {
     expect(
       resolveRelease({
         offset: 40,
+        pointerDisplacement: 40,
         velocity: 0,
         direction: 'ltr',
         rowWidth,
@@ -55,6 +59,7 @@ describe('release target resolution', () => {
     expect(
       resolveRelease({
         offset: 15,
+        pointerDisplacement: 15,
         velocity: 0.5,
         direction: 'ltr',
         rowWidth,
@@ -70,6 +75,7 @@ describe('release target resolution', () => {
     expect(
       resolveRelease({
         offset: 96,
+        pointerDisplacement: 0,
         velocity: -1,
         direction: 'ltr',
         rowWidth,
@@ -85,6 +91,7 @@ describe('release target resolution', () => {
     expect(
       resolveRelease({
         offset: 20,
+        pointerDisplacement: 20,
         velocity: 2,
         direction: 'ltr',
         rowWidth,
@@ -101,6 +108,7 @@ describe('release target resolution', () => {
     expect(
       resolveRelease({
         offset: 224,
+        pointerDisplacement: 224,
         velocity: 0,
         direction: 'ltr',
         rowWidth,
@@ -125,6 +133,7 @@ describe('release target resolution', () => {
       expect(
         resolveRelease({
           offset,
+          pointerDisplacement: offset,
           velocity: 0,
           direction: 'ltr',
           rowWidth,
@@ -142,6 +151,7 @@ describe('release target resolution', () => {
     expect(
       resolveRelease({
         offset: 225,
+        pointerDisplacement: 225,
         velocity: -2,
         direction: 'ltr',
         rowWidth,
@@ -158,6 +168,7 @@ describe('release target resolution', () => {
     expect(
       resolveRelease({
         offset: 47,
+        pointerDisplacement: 47,
         velocity: 2,
         direction: 'ltr',
         rowWidth,
@@ -174,6 +185,7 @@ describe('release target resolution', () => {
     expect(
       resolveRelease({
         offset: 48,
+        pointerDisplacement: 48,
         velocity: 2,
         direction: 'ltr',
         rowWidth,
@@ -190,6 +202,7 @@ describe('release target resolution', () => {
     expect(
       resolveRelease({
         offset: -40,
+        pointerDisplacement: -40,
         velocity: 0,
         direction: 'rtl',
         rowWidth,
@@ -226,6 +239,7 @@ describe('release target resolution', () => {
       expect(
         resolveRelease({
           offset,
+          pointerDisplacement: offset,
           velocity: 0,
           direction,
           rowWidth,
@@ -235,6 +249,51 @@ describe('release target resolution', () => {
           fullSwipeThreshold: 0.7,
         }),
       ).toEqual({ kind: 'activate', side, offset: target })
+    },
+  )
+
+  it.each([
+    {
+      direction: 'ltr' as const,
+      offset: -109,
+      pointerDisplacement: -13,
+      want: { kind: 'open', side: 'trailing', offset: -96 },
+    },
+    {
+      direction: 'rtl' as const,
+      offset: 109,
+      pointerDisplacement: 13,
+      want: { kind: 'open', side: 'trailing', offset: 96 },
+    },
+    {
+      direction: 'ltr' as const,
+      offset: -144,
+      pointerDisplacement: -48,
+      want: { kind: 'activate', side: 'trailing', offset: -320 },
+    },
+    {
+      direction: 'rtl' as const,
+      offset: 144,
+      pointerDisplacement: 48,
+      want: { kind: 'activate', side: 'trailing', offset: 320 },
+    },
+  ])(
+    'uses $pointerDisplacement px of pointer travel from an open trailing side in $direction',
+    ({ direction, offset, pointerDisplacement, want }) => {
+      // Catches an existing 96px resting offset satisfying the 15% travel gate.
+      expect(
+        resolveRelease({
+          offset,
+          pointerDisplacement,
+          velocity: Math.sign(pointerDisplacement) * 2,
+          direction,
+          rowWidth,
+          widths,
+          fullSwipeSides: { trailing: true },
+          openThreshold: 0.35,
+          fullSwipeThreshold: 0.7,
+        }),
+      ).toEqual(want)
     },
   )
 })

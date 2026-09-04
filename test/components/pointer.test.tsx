@@ -260,8 +260,8 @@ describe('SwipeActions pointer gestures', () => {
     }
   })
 
-  it('permanently yields exact diagonal and vertical sessions to native scrolling', async () => {
-    // Catches diagonal ties favoring swipe or a rejected vertical session reactivating.
+  it('keeps near-diagonal movement pending until horizontal intent becomes decisive', async () => {
+    // Catches a near diagonal immediately and permanently yielding before a decisive move.
     const row = await renderRow()
 
     dispatchPointer(row.content, 'pointerdown', {
@@ -286,26 +286,43 @@ describe('SwipeActions pointer gestures', () => {
     })
 
     expect(diagonal.defaultPrevented).toBe(false)
+    expect(laterHorizontal.defaultPrevented).toBe(true)
+    expect(row.setPointerCapture).toHaveBeenCalledExactlyOnceWith(1)
+    frames.advance(16)
+    expect(row.root).toHaveAttribute('data-state', 'settling')
+  })
+
+  it('uses vertical ownership for a diagonal tie at the decision boundary', async () => {
+    // Catches the explicit tie boundary granting horizontal ownership or reactivating later.
+    const row = await renderRow()
+
+    dispatchPointer(row.content, 'pointerdown', {
+      clientX: 0,
+      clientY: 0,
+      timeStamp: 0,
+    })
+    const diagonal = dispatchPointer(row.content, 'pointermove', {
+      clientX: 13,
+      clientY: 13,
+      timeStamp: 10,
+    })
+    const laterHorizontal = dispatchPointer(row.content, 'pointermove', {
+      clientX: 80,
+      clientY: 14,
+      timeStamp: 20,
+    })
+    dispatchPointer(row.content, 'pointerup', {
+      clientX: 80,
+      clientY: 14,
+      timeStamp: 30,
+    })
+
+    expect(diagonal.defaultPrevented).toBe(false)
     expect(laterHorizontal.defaultPrevented).toBe(false)
     expect(row.setPointerCapture).not.toHaveBeenCalled()
     expect(frames.pending()).toBe(0)
     expect(row.root).toHaveStyle({ '--swipe-actions-offset': '0px' })
     expect(row.onOpenSideChange).not.toHaveBeenCalled()
-
-    dispatchPointer(row.content, 'pointerdown', {
-      pointerId: 2,
-      clientX: 0,
-      clientY: 0,
-      timeStamp: 40,
-    })
-    const vertical = dispatchPointer(row.content, 'pointermove', {
-      pointerId: 2,
-      clientX: 4,
-      clientY: 30,
-      timeStamp: 50,
-    })
-    expect(vertical.defaultPrevented).toBe(false)
-    expect(row.setPointerCapture).not.toHaveBeenCalled()
   })
 
   it('leaves jitter inside the dead zone click-compatible', async () => {

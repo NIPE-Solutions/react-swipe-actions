@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
@@ -72,13 +79,27 @@ function validateBrowserWorkflow(workflow) {
 
     const commands = runCommands(job)
     assert.ok(commands.includes('npm ci'))
-    assert.ok(
-      commands.some(
-        (command) =>
-          command.includes('playwright install --with-deps') &&
-          command.includes(browser),
-      ),
+    const installIndex = commands.findIndex(
+      (command) =>
+        command.includes('playwright install --with-deps') &&
+        command.includes(browser),
     )
+    assert.notEqual(installIndex, -1)
+    const websiteBrowserIndex = commands.indexOf(
+      'npm run verify:website:browser',
+    )
+    if (browser === 'chromium') {
+      assert.ok(
+        websiteBrowserIndex > installIndex,
+        'live website Chromium/axe validation must follow browser installation',
+      )
+    } else {
+      assert.equal(
+        websiteBrowserIndex,
+        -1,
+        'the Chromium-only website check must not run in other engine jobs',
+      )
+    }
     assert.ok(
       commands.includes(
         `npm run test:e2e -- --project=${browser} --reporter=line,html`,
@@ -126,10 +147,16 @@ function validateReleaseWorkflow(workflow) {
   const verifyCommands = runCommands(verify)
   assert.ok(verifyCommands.includes('npm ci'))
   assert.ok(verifyCommands.includes('npm run check'))
+  const installIndex = verifyCommands.indexOf(
+    'npx playwright install --with-deps chromium firefox webkit',
+  )
+  assert.notEqual(installIndex, -1)
+  const websiteBrowserIndex = verifyCommands.indexOf(
+    'npm run verify:website:browser',
+  )
   assert.ok(
-    verifyCommands.includes(
-      'npx playwright install --with-deps chromium firefox webkit',
-    ),
+    websiteBrowserIndex > installIndex,
+    'release live website Chromium/axe validation must follow browser installation',
   )
   assert.ok(verifyCommands.includes('npm run test:e2e'))
   assert.ok(
@@ -250,11 +277,35 @@ test('quality workflow is a cancellable Node 24 npm gate', async () => {
   assert.equal(setupNode?.with?.cache, 'npm')
   assert.deepEqual(runCommands(quality), ['npm ci', 'npm run check'])
   assert.match(packageJson.scripts.check, /npm run test:workflows/)
+  assert.match(packageJson.scripts.check, /npm run verify:website(?:\s|$)/)
+  assert.doesNotMatch(
+    packageJson.scripts.check,
+    /verify:website:browser/,
+    'the practical quality gate must not require a Playwright browser cache',
+  )
+  assert.ok(packageJson.scripts['verify:website:browser'])
   assert.doesNotMatch(packageJson.scripts.check, /release:check/)
 })
 
 test('browser workflow keeps Chromium, Firefox, and WebKit required and isolated', async () => {
   validateBrowserWorkflow(await readYaml('.github/workflows/browser.yml'))
+})
+
+test('Ubuntu CI has a complete platform-specific visual baseline set', async () => {
+  const snapshotDirectory = path.join(
+    repositoryRoot,
+    'e2e/visual.spec.ts-snapshots',
+  )
+  const snapshots = await readdir(snapshotDirectory)
+  const states = ['armed', 'closed', 'leading', 'rtl', 'trailing']
+  const browsers = ['chromium', 'firefox', 'webkit']
+
+  assert.deepEqual(
+    snapshots.filter((file) => file.endsWith('-linux.png')).sort(),
+    states.flatMap((state) =>
+      browsers.map((browser) => `${state}-${browser}-linux.png`),
+    ),
+  )
 })
 
 test('browser policy rejects a best-effort WebKit job', async () => {

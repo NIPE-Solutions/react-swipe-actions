@@ -34,6 +34,7 @@ const expectedRuntimeExports = [
 ]
 const sourceMode = process.argv.includes('--source')
 const repositoryUrl = 'https://github.com/nipe-solutions/react-swipe-actions'
+const websiteUrl = 'https://react-swipe-actions.nipesolutions.com'
 const documentationFiles = [
   'README.md',
   'CHANGELOG.md',
@@ -288,7 +289,7 @@ async function validateSourceDocumentation() {
     await readFile(path.join(import.meta.dirname, 'public-api.json'), 'utf8'),
   )
   assert.equal(packageJson.license, 'MIT')
-  assert.equal(packageJson.homepage, `${repositoryUrl}#readme`)
+  assert.equal(packageJson.homepage, websiteUrl)
   assert.deepEqual(packageJson.bugs, { url: `${repositoryUrl}/issues` })
 
   const license = await readFile(path.join(repositoryRoot, 'LICENSE'), 'utf8')

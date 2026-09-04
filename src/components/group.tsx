@@ -1,13 +1,9 @@
 import { useRef } from 'react'
-import type { ReactNode } from 'react'
+import type { SwipeActionsGroupProps } from '../public-types'
 import { GroupContext } from './context'
 import type { GroupRegistry } from './context'
 
-interface GroupProps {
-  children?: ReactNode
-}
-
-export function Group({ children }: GroupProps) {
+export function Group({ children }: SwipeActionsGroupProps) {
   const closeCallbacksRef = useRef(new Map<string, () => void>())
   const openIdRef = useRef<string | null>(null)
   const registryRef = useRef<GroupRegistry | null>(null)

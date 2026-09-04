@@ -92,7 +92,10 @@ function Website() {
         <section id="quick-start" className="quick-start">
           <h2>Quick start</h2>
           <div data-testid="canonical-code">
-            <CodeBlock code={canonicalCode} label="MessageRow.tsx" />
+            <CodeBlock code={canonicalCode} label="MessageRow excerpt" />
+            <a className="quick-start__more" href="#examples">
+              Continue to complete examples
+            </a>
           </div>
         </section>
       </div>

@@ -282,6 +282,23 @@ main {
   letter-spacing: -0.01em;
 }
 
+.quick-start .code-block pre {
+  overflow-x: hidden;
+  font-size: 13px;
+  line-height: 1.34;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.quick-start__more {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 34px;
+  margin-block-start: 4px;
+  font-size: 12px;
+  font-weight: 690;
+}
+
 .install-panel > p {
   margin: 8px 0 0;
   color: #5e6c81;
@@ -1186,9 +1203,6 @@ kbd {
   .quick-start {
     margin-block-start: 14px;
   }
-  .inbox-demo__rows .demo-row--3 {
-    display: none;
-  }
   .swipe-row__content {
     min-block-size: 90px;
     padding-inline: 13px;
@@ -1267,6 +1281,15 @@ kbd {
   .quick-start {
     min-inline-size: 0;
     margin-block-start: 0;
+  }
+  .opening__copy {
+    order: 1;
+  }
+  .quick-start {
+    order: 2;
+  }
+  .demo-column {
+    order: 3;
   }
   .intro h1 {
     font-size: clamp(42px, 10vw, 58px);
@@ -1367,9 +1390,6 @@ kbd {
   }
   .inbox-demo__bar .demo-count-compact {
     display: block;
-  }
-  .inbox-demo__rows [data-demo-row]:not(:first-child) {
-    display: none;
   }
   .swipe-row__content {
     grid-template-columns: 36px minmax(0, 1fr);

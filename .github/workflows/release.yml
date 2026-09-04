@@ -71,7 +71,7 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
       - name: Download verified release artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: npm-package-alpha
           path: release-artifact

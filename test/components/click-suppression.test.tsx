@@ -179,4 +179,20 @@ describe('SwipeActions click suppression', () => {
     expect(targets.firstClick).toHaveBeenCalledOnce()
     vi.useRealTimers()
   })
+
+  it('does not let a prior swipe suppress a fresh tap', async () => {
+    // Catches a completed suppression marker surviving into a new eligible session.
+    const targets = await renderTargets()
+
+    pointer(targets.first, 'pointerdown', 0, 0, 1)
+    pointer(targets.first, 'pointermove', 40, 0, 10)
+    pointer(targets.first, 'pointerup', 40, 0, 20)
+
+    pointer(targets.first, 'pointerdown', 40, 0, 30)
+    pointer(targets.first, 'pointerup', 40, 0, 35)
+    const freshClick = click(targets.first, 36)
+
+    expect(freshClick.defaultPrevented).toBe(false)
+    expect(targets.firstClick).toHaveBeenCalledOnce()
+  })
 })

@@ -568,4 +568,58 @@ describe('SwipeActions pointer gestures', () => {
 
     expect(row.onOpenSideChange).toHaveBeenCalledExactlyOnceWith('leading')
   })
+
+  it('restores a controlled closed offset when an open request is rejected', async () => {
+    // Catches a completed gesture target remaining visual after controlled state rejects it.
+    const row = await renderRow({ openSide: null })
+
+    dispatchPointer(row.content, 'pointerdown', {
+      clientX: 0,
+      clientY: 0,
+      timeStamp: 1,
+    })
+    dispatchPointer(row.content, 'pointermove', {
+      clientX: 60,
+      clientY: 0,
+      timeStamp: 100,
+    })
+    dispatchPointer(row.content, 'pointerup', {
+      clientX: 60,
+      clientY: 0,
+      timeStamp: 200,
+    })
+    frames.advance(400)
+    await act(() => Promise.resolve())
+
+    expect(row.onOpenSideChange).toHaveBeenCalledExactlyOnceWith('leading')
+    expect(row.root).toHaveAttribute('data-state', 'closed')
+    expect(row.root).toHaveStyle({ '--swipe-actions-offset': '0px' })
+  })
+
+  it('restores a controlled open offset when a close request is rejected', async () => {
+    // Catches a completed close target overriding an unchanged controlled open side.
+    const row = await renderRow({ openSide: 'leading' })
+
+    dispatchPointer(row.content, 'pointerdown', {
+      clientX: 0,
+      clientY: 0,
+      timeStamp: 1,
+    })
+    dispatchPointer(row.content, 'pointermove', {
+      clientX: -60,
+      clientY: 0,
+      timeStamp: 100,
+    })
+    dispatchPointer(row.content, 'pointerup', {
+      clientX: -60,
+      clientY: 0,
+      timeStamp: 200,
+    })
+    frames.advance(400)
+    await act(() => Promise.resolve())
+
+    expect(row.onOpenSideChange).toHaveBeenCalledExactlyOnceWith(null)
+    expect(row.root).toHaveAttribute('data-state', 'open')
+    expect(row.root).toHaveStyle({ '--swipe-actions-offset': '80px' })
+  })
 })

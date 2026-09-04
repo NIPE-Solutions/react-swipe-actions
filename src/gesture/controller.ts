@@ -51,7 +51,7 @@ export interface GestureControllerOptions {
   getOpenSide(): SwipeActionsOpenSide
   getOpenThreshold(): number
   getFullSwipeThreshold(): number
-  requestOpenSide(side: SwipeActionsOpenSide): void
+  requestOpenSide(side: SwipeActionsOpenSide): SwipeActionsOpenSide
   setPhase(phase: GesturePhase): void
 }
 
@@ -98,8 +98,7 @@ export function createGestureController(
   let suppression: ClickSuppression | null = null
   let blurWindow: Window | null = null
 
-  const restingOffset = () => {
-    const side = options.getOpenSide()
+  const offsetForSide = (side: SwipeActionsOpenSide) => {
     if (side === null) {
       return 0
     }
@@ -109,6 +108,8 @@ export function createGestureController(
       options.motion.measurements()[side].width
     )
   }
+
+  const restingOffset = () => offsetForSide(options.getOpenSide())
 
   const restingPhase = (): GesturePhase =>
     options.getOpenSide() === null ? 'closed' : 'open'
@@ -149,8 +150,8 @@ export function createGestureController(
 
   const abandonSession = (restore: boolean) => {
     const active = session
-    session = null
     clearDragFrame()
+    session = null
     removeBlurListener()
 
     if (active !== null) {
@@ -260,8 +261,9 @@ export function createGestureController(
         return
       }
 
-      options.requestOpenSide(target.side)
-      options.setPhase(target.side === null ? 'closed' : 'open')
+      const authoritativeSide = options.requestOpenSide(target.side)
+      options.motion.writeOffset(offsetForSide(authoritativeSide))
+      options.setPhase(authoritativeSide === null ? 'closed' : 'open')
     })
   }
 
@@ -283,6 +285,7 @@ export function createGestureController(
         return
       }
 
+      clearSuppression()
       const startOffset = options.motion.readOffset()
       const interruptedSettle = options.motion.cancel()
       settleGeneration += 1

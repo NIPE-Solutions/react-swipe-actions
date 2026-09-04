@@ -11,7 +11,8 @@ function dispatchPointer(
   x: number,
   timeStamp: number,
 ) {
-  const event = new Event(type, { bubbles: true, cancelable: true })
+  const EventConstructor = target.ownerDocument.defaultView?.Event ?? Event
+  const event = new EventConstructor(type, { bubbles: true, cancelable: true })
   Object.defineProperties(event, {
     pointerId: { value: 1 },
     pointerType: { value: 'touch' },
@@ -29,6 +30,8 @@ function createFrames() {
   const callbacks = new Map<number, FrameRequestCallback>()
   return {
     install() {
+      identifier = 0
+      callbacks.clear()
       vi.stubGlobal(
         'requestAnimationFrame',
         (callback: FrameRequestCallback) => {
@@ -66,11 +69,16 @@ function patchCapture(content: HTMLElement) {
   return { setPointerCapture, releasePointerCapture }
 }
 
-function row(openSide?: 'leading' | 'trailing' | null, onChange = vi.fn()) {
+function row(
+  openSide?: 'leading' | 'trailing' | null,
+  onChange = vi.fn(),
+  disabled = false,
+) {
   return (
     <Root
       {...(openSide === undefined ? {} : { openSide })}
       onOpenSideChange={onChange}
+      disabled={disabled}
       data-testid="root"
     >
       <Leading data-testid="leading" />
@@ -332,5 +340,102 @@ describe('SwipeActions gesture lifecycle', () => {
     dispatchPointer(content, 'pointermove', 40, 10)
 
     expect(request.mock.contexts[0]).toBe(window)
+  })
+
+  it('cancels a pending session when Root becomes disabled', async () => {
+    // Catches a pending pointer retaining authority after disabled changes.
+    const onChange = vi.fn()
+    const rendered = render(row(null, onChange))
+    measure(rendered.container)
+    await act(() => Promise.resolve())
+    const content = rendered.getByTestId('content')
+    const capture = patchCapture(content)
+
+    dispatchPointer(content, 'pointerdown', 0, 1)
+    rendered.rerender(row(null, onChange, true))
+    await act(() => Promise.resolve())
+    dispatchPointer(content, 'pointermove', 40, 10)
+
+    expect(capture.setPointerCapture).not.toHaveBeenCalled()
+    expect(frames.pending()).toBe(0)
+    expect(rendered.getByTestId('root')).toHaveStyle({
+      '--swipe-actions-offset': '0px',
+    })
+  })
+
+  it('cancels an owned drag when Root becomes disabled', async () => {
+    // Catches disabled changes leaving capture or a queued drag write alive.
+    const onChange = vi.fn()
+    const rendered = render(row(null, onChange))
+    measure(rendered.container)
+    await act(() => Promise.resolve())
+    const content = rendered.getByTestId('content')
+    const capture = patchCapture(content)
+    dispatchPointer(content, 'pointerdown', 0, 1)
+    dispatchPointer(content, 'pointermove', 40, 10)
+
+    rendered.rerender(row(null, onChange, true))
+    await act(() => Promise.resolve())
+
+    expect(capture.releasePointerCapture).toHaveBeenCalledExactlyOnceWith(1)
+    expect(frames.pending()).toBe(0)
+    expect(rendered.getByTestId('root')).toHaveStyle({
+      '--swipe-actions-offset': '0px',
+    })
+    expect(rendered.getByTestId('root')).toHaveAttribute('data-disabled', '')
+  })
+
+  it('cancels settling when Root becomes disabled', async () => {
+    // Catches a disabled change allowing a stale settle to request semantic state.
+    const onChange = vi.fn()
+    const rendered = render(row(null, onChange))
+    measure(rendered.container)
+    await act(() => Promise.resolve())
+    const content = rendered.getByTestId('content')
+    patchCapture(content)
+    dispatchPointer(content, 'pointerdown', 0, 1)
+    dispatchPointer(content, 'pointermove', 50, 10)
+    dispatchPointer(content, 'pointerup', 50, 20)
+    const staleFrame = frames.first()
+
+    rendered.rerender(row(null, onChange, true))
+    await act(() => Promise.resolve())
+    staleFrame(400)
+    await act(() => Promise.resolve())
+
+    expect(frames.pending()).toBe(0)
+    expect(rendered.getByTestId('root')).toHaveStyle({
+      '--swipe-actions-offset': '0px',
+    })
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('cancels a drag frame through the scheduling Window', async () => {
+    // Catches session cleanup falling back to the ambient Window after nulling session.
+    const frame = document.createElement('iframe')
+    document.body.append(frame)
+    const frameWindow = frame.contentWindow!
+    const requestFrame = vi.fn(() => 41)
+    const cancelFrame = vi.fn()
+    Object.defineProperties(frameWindow, {
+      requestAnimationFrame: { configurable: true, value: requestFrame },
+      cancelAnimationFrame: { configurable: true, value: cancelFrame },
+    })
+    const rendered = render(row(null), {
+      container: frame.contentDocument!.body,
+    })
+    measure(rendered.container)
+    await act(() => Promise.resolve())
+    const content = rendered.getByTestId('content')
+    patchCapture(content)
+
+    dispatchPointer(content, 'pointerdown', 0, 1)
+    dispatchPointer(content, 'pointermove', 40, 10)
+    dispatchPointer(content, 'pointercancel', 40, 20)
+
+    expect(requestFrame).toHaveBeenCalledOnce()
+    expect(cancelFrame).toHaveBeenCalledExactlyOnceWith(41)
+    rendered.unmount()
+    frame.remove()
   })
 })

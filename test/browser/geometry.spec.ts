@@ -4,34 +4,24 @@ import type { Page } from '@playwright/test'
 declare global {
   interface Window {
     deliverObservedBoxes(): void
-    widenLeadingAction(): void
   }
 }
 
 async function dragTo(page: Page) {
   const content = page.getByTestId('content')
-  await content.dispatchEvent('pointerdown', {
-    pointerId: 1,
-    pointerType: 'touch',
-    isPrimary: true,
-    button: 0,
-    clientX: 0,
-    clientY: 0,
-  })
-  await content.dispatchEvent('pointermove', {
-    pointerId: 1,
-    pointerType: 'touch',
-    isPrimary: true,
-    button: 0,
-    clientX: 160,
-    clientY: 0,
-  })
+  const box = await content.boundingBox()
+  expect(box).not.toBeNull()
+  const x = box!.x + 48
+  const y = box!.y + box!.height / 2
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(x + 160, y, { steps: 6 })
 }
 
 test('pre-arm expansion survives actual-size observer delivery without changing measured boxes', async ({
   page,
 }) => {
-  await page.goto('/test/browser/geometry.html')
+  await page.goto('/e2e/app/?scenario=geometry')
 
   const root = page.getByTestId('root')
   const side = page.getByTestId('leading')
@@ -71,12 +61,13 @@ test('pre-arm expansion survives actual-size observer delivery without changing 
   expect(await Promise.all([side.boundingBox(), action.boundingBox()])).toEqual(
     naturalBoxes,
   )
+  await page.mouse.up()
 })
 
 test('an actual action-only resize cancels a live pre-arm expansion', async ({
   page,
 }) => {
-  await page.goto('/test/browser/geometry.html')
+  await page.goto('/e2e/app/?scenario=geometry')
 
   const root = page.getByTestId('root')
   const side = page.getByTestId('leading')
@@ -91,10 +82,13 @@ test('an actual action-only resize cancels a live pre-arm expansion', async ({
     .not.toBe('')
   const naturalSideBox = await side.boundingBox()
 
+  const resize = page.getByTestId('widen-leading-action')
   await dragTo(page)
   await expect(action).toHaveAttribute('data-full-swipe-expanding', '')
 
-  await page.evaluate(() => window.widenLeadingAction())
+  await resize.focus()
+  await page.keyboard.press('Enter')
+  await page.mouse.up()
 
   await expect(root).toHaveAttribute('data-state', 'closed')
   await expect(action).not.toHaveAttribute('data-full-swipe-expanding')

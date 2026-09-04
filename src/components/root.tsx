@@ -85,6 +85,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     const groupId = useId()
     const elementRef = useRef<HTMLDivElement>(null)
     const disabledRef = useRef(disabled)
+    const controlledRef = useRef(controlledOpenSide !== undefined)
     const openSideRef = useRef(controlledOpenSide ?? defaultOpenSide ?? null)
     const directionRef = useRef<SwipeActionsDirection>(resolvedDirection)
     const requestOpenSideRef = useRef<(side: SwipeActionsSide | null) => void>(
@@ -124,6 +125,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     const fullSwipeThresholdRef = useRef(fullSwipeThreshold)
 
     disabledRef.current = disabled
+    controlledRef.current = controlledOpenSide !== undefined
     openSideRef.current = openSide
     directionRef.current = resolvedDirection
     requestOpenSideRef.current = requestOpenSide
@@ -178,7 +180,10 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         getOpenSide: () => openSideRef.current,
         getOpenThreshold: () => openThresholdRef.current,
         getFullSwipeThreshold: () => fullSwipeThresholdRef.current,
-        requestOpenSide: (side) => requestOpenSideRef.current(side),
+        requestOpenSide: (side) => {
+          requestOpenSideRef.current(side)
+          return controlledRef.current ? openSideRef.current : side
+        },
         setPhase: (phase) => {
           elementRef.current?.setAttribute('data-state', phase)
         },
@@ -385,7 +390,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
 
     useLayoutEffect(() => {
       reconcileMeasurements()
-    }, [openSide, reconcileMeasurements, resolvedDirection])
+    }, [disabled, openSide, reconcileMeasurements, resolvedDirection])
 
     const context = useMemo(
       () => ({

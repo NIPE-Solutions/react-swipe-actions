@@ -258,3 +258,31 @@ pass. In particular, OS browser back-edge gestures on physical Mobile Safari and
 Chrome Android require device testing because desktop automation cannot
 faithfully reproduce navigation-edge ownership. Bottom Sheet integrations also
 need checks against the consuming sheet version and configuration.
+
+### Native-feel interaction matrix
+
+The release audit uses outcomes rather than pixel-perfect timing:
+
+| Trace | Intended outcome |
+| --- | --- |
+| Slow short drag | Returns closed below the measured open threshold. |
+| Slow long drag | Opens the revealed side at its measured width. |
+| Fast short flick | Opens only after meaningful travel and forward projection. |
+| Fast long flick | Continues toward the committed side without a speed discontinuity. |
+| Pause before release | Stale velocity decays; position decides the target. |
+| Direction reversal | Recent reversed segments outweigh earlier movement. |
+| Drag from open | Starts at the measured open offset and may close or cross sides. |
+| Cross through closed | Passes through a bounded neutral gate before revealing the opposite side. |
+| Full-swipe arm/disarm | Arms at the threshold, remains stable near it, and disarms after deliberate reversal. |
+| Overswipe | Remains continuous while asymptotically resisting beyond the meaningful bound. |
+| Re-grab during settle | Cancels settling and begins at the current visual transform without a jump. |
+| Pointer cancellation | Restores the authoritative resting state and releases resources. |
+| Vertical or diagonal motion | Gives native scrolling permanent ownership for that pointer session. |
+| Group handoff | Closes the previous row while the successor begins settling open. |
+| RTL | Keeps logical sides while reversing physical offsets and velocity signs. |
+| Reduced motion | Keeps direct drag feedback and resolves settling immediately. |
+
+Pure-function tests cover velocity, projection, direction, resistance, and
+animation cancellation. Component tests cover state and resource lifecycles.
+Playwright traces cover browser pointer behavior and continuity; physical-device
+checks remain tracked in `REAL_DEVICE_QA.md`.

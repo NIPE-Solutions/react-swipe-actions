@@ -125,7 +125,11 @@ async function rejectInternalDeclarationReferences(entry) {
 
     const relative = path.relative(path.dirname(entry), current)
     const segments = relative.split(path.sep)
-    if (segments.includes('gesture') || segments.includes('motion')) {
+    if (
+      segments.includes('gesture') ||
+      segments.includes('motion') ||
+      segments.includes('state')
+    ) {
       throw new Error(
         `Public declarations reference an internal module: ${relative}`,
       )
@@ -139,22 +143,44 @@ async function rejectInternalDeclarationReferences(entry) {
       ts.ScriptKind.TS,
     )
 
-    for (const statement of source.statements) {
-      if (
-        (ts.isImportDeclaration(statement) ||
-          ts.isExportDeclaration(statement)) &&
-        statement.moduleSpecifier !== undefined &&
-        ts.isStringLiteral(statement.moduleSpecifier) &&
-        statement.moduleSpecifier.text.startsWith('.')
-      ) {
+    for (const specifier of referencedModules(source)) {
+      if (specifier.startsWith('.')) {
         queue.push(
-          path.resolve(
-            path.dirname(current),
-            declarationTarget(statement.moduleSpecifier.text),
-          ),
+          path.resolve(path.dirname(current), declarationTarget(specifier)),
         )
       }
     }
+  }
+}
+
+function referencedModules(source) {
+  const specifiers = []
+
+  visit(source)
+  return specifiers
+
+  function visit(node) {
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier !== undefined &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      specifiers.push(node.moduleSpecifier.text)
+    } else if (
+      ts.isImportTypeNode(node) &&
+      ts.isLiteralTypeNode(node.argument) &&
+      ts.isStringLiteral(node.argument.literal)
+    ) {
+      specifiers.push(node.argument.literal.text)
+    } else if (
+      ts.isExternalModuleReference(node) &&
+      node.expression !== undefined &&
+      ts.isStringLiteral(node.expression)
+    ) {
+      specifiers.push(node.expression.text)
+    }
+
+    ts.forEachChild(node, visit)
   }
 }
 

@@ -47,6 +47,69 @@ test('public API checker rejects an exported gesture internal', async () => {
   }
 })
 
+test('public API checker rejects an inline import of an internal type', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'swipe-actions-api-'))
+  const declaration = path.join(directory, 'index.d.ts')
+  const allowlist = path.join(directory, 'public-api.json')
+
+  try {
+    await writeFile(
+      declaration,
+      "export declare const SwipeActions: import('./gesture/controller.js').GestureState\n",
+    )
+    await writeFile(
+      allowlist,
+      `${JSON.stringify({ runtime: ['SwipeActions'], types: [] })}\n`,
+    )
+
+    await assert.rejects(
+      execFileAsync(
+        process.execPath,
+        [
+          'scripts/check-public-api.mjs',
+          '--declaration',
+          declaration,
+          '--allowlist',
+          allowlist,
+        ],
+        { cwd: repositoryRoot },
+      ),
+      (error) => {
+        assert.match(
+          error.stderr,
+          /Public declarations reference an internal module: gesture[/\\]controller\.d\.ts/,
+        )
+        return true
+      },
+    )
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('packed file allowlist rejects an unexpected dist file', async () => {
+  const unexpectedFile = path.join(repositoryRoot, 'dist/unexpected.tmp')
+
+  try {
+    await writeFile(unexpectedFile, 'must not ship\n')
+    await assert.rejects(
+      execFileAsync(process.execPath, ['scripts/verify-package.mjs'], {
+        cwd: repositoryRoot,
+        maxBuffer: 10 * 1024 * 1024,
+      }),
+      (error) => {
+        assert.match(
+          error.stderr,
+          /Unexpected packed files: dist\/unexpected\.tmp/,
+        )
+        return true
+      },
+    )
+  } finally {
+    await rm(unexpectedFile, { force: true })
+  }
+})
+
 test('packed package passes isolated React 18 and React 19 consumers', async () => {
   const { stdout, stderr } = await execFileAsync(
     process.execPath,

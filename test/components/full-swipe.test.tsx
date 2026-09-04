@@ -291,7 +291,10 @@ describe('SwipeActions full swipe', () => {
     frames.advance(16)
     expect(row.leadingAction).toHaveAttribute('data-active', '')
 
-    dispatchPointer(row.content, 'pointermove', { clientX: 217, timeStamp: 120 })
+    dispatchPointer(row.content, 'pointermove', {
+      clientX: 217,
+      timeStamp: 120,
+    })
     frames.advance(16)
     expect(row.leadingAction).toHaveAttribute('data-active', '')
 
@@ -308,7 +311,10 @@ describe('SwipeActions full swipe', () => {
     frames.advance(16)
     expect(row.leadingAction).toHaveAttribute('data-active', '')
 
-    dispatchPointer(row.content, 'pointermove', { clientX: 210, timeStamp: 120 })
+    dispatchPointer(row.content, 'pointermove', {
+      clientX: 210,
+      timeStamp: 120,
+    })
     frames.advance(16)
     expect(row.leadingAction).not.toHaveAttribute('data-active')
 

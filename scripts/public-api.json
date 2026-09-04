@@ -1,0 +1,22 @@
+{
+  "runtime": [
+    "Action",
+    "Content",
+    "Group",
+    "Leading",
+    "Root",
+    "SwipeActions",
+    "Trailing"
+  ],
+  "types": [
+    "SwipeActionsActionProps",
+    "SwipeActionsContentProps",
+    "SwipeActionsDirection",
+    "SwipeActionsGroupProps",
+    "SwipeActionsHandle",
+    "SwipeActionsOpenSide",
+    "SwipeActionsRootProps",
+    "SwipeActionsSide",
+    "SwipeActionsSideProps"
+  ]
+}

@@ -313,8 +313,8 @@ async function validateSourceDocumentation() {
   assert.ok(changelog, 'CHANGELOG.md must be readable')
   assert.match(
     changelog,
-    /^## \[0\.1\.0-alpha\.0\] - Unreleased$/m,
-    'CHANGELOG.md must contain the unreleased 0.1.0-alpha.0 section',
+    /^## \[0\.1\.0-alpha\.0\] - \d{4}-\d{2}-\d{2}$/m,
+    'CHANGELOG.md must contain the dated 0.1.0-alpha.0 section',
   )
 
   const contributing = files.get('CONTRIBUTING.md')

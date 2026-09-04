@@ -2,7 +2,7 @@
 
 All notable changes are documented in this file.
 
-## [0.1.0-alpha.0] - Unreleased
+## [0.1.0-alpha.0] - 2026-09-05
 
 ### Added
 
@@ -10,6 +10,8 @@ All notable changes are documented in this file.
 - Core, optional theme, and combined stylesheet entrypoints.
 - Controlled and uncontrolled open state, group coordination, keyboard access,
   RTL, SSR-safe imports, and browser interaction coverage.
+- A documentation website with live examples, grouped navigation, release
+  status, project/legal links, and complete search/social metadata.
 
 ### Fixed
 
@@ -33,6 +35,10 @@ All notable changes are documented in this file.
   covers its release-shell regressions.
 - Corrected the interaction guide's RTL keyboard mapping and added a package
   regression that keeps physical arrow edges aligned with logical sides.
+- Stabilized full-swipe arming with a small internal hysteresis band shared by
+  visual state and release resolution, without adding a public tuning prop.
+- Made the cross-browser fast-flick trace deterministic inside browser frames so
+  protocol latency cannot turn the test's intended flick into a stale release.
 
 ### Verified
 

@@ -44,10 +44,10 @@ export function validateReleaseMetadata(packageJson, changelog) {
   assert.match(
     changelog,
     new RegExp(
-      `^## \\[${escapeRegExp(packageJson.version)}\\] - Unreleased$`,
+      `^## \\[${escapeRegExp(packageJson.version)}\\] - \\d{4}-\\d{2}-\\d{2}$`,
       'm',
     ),
-    `CHANGELOG.md must contain an Unreleased entry for ${packageJson.version}`,
+    `CHANGELOG.md must contain a dated release entry for ${packageJson.version}`,
   )
   assert.equal(
     packageJson.publishConfig?.access,

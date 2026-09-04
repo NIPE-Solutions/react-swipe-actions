@@ -438,7 +438,7 @@ test('release metadata requires the approved prerelease identity and provenance'
     },
     publishConfig: { access: 'public', provenance: true, tag: 'alpha' },
   }
-  const changelog = '# Changelog\n\n## [0.1.0-alpha.0] - Unreleased\n'
+  const changelog = '# Changelog\n\n## [0.1.0-alpha.0] - 2026-09-05\n'
 
   assert.deepEqual(validateReleaseMetadata(packageJson, changelog), {
     name: '@nipe-solutions/react-swipe-actions',
@@ -446,6 +446,14 @@ test('release metadata requires the approved prerelease identity and provenance'
     channel: 'alpha',
   })
 
+  assert.throws(
+    () =>
+      validateReleaseMetadata(
+        packageJson,
+        '# Changelog\n\n## [0.1.0-alpha.0] - Unreleased\n',
+      ),
+    /dated release entry/,
+  )
   assert.throws(
     () =>
       validateReleaseMetadata({ ...packageJson, version: '0.1.0' }, changelog),
@@ -486,7 +494,7 @@ test('release metadata requires the approved prerelease identity and provenance'
           version: '0.1.0-beta.0',
           publishConfig: { ...packageJson.publishConfig, tag: 'beta' },
         },
-        '# Changelog\n\n## [0.1.0-beta.0] - Unreleased\n',
+        '# Changelog\n\n## [0.1.0-beta.0] - 2026-09-05\n',
       ),
     /0\.1 prereleases must use the alpha channel/,
   )

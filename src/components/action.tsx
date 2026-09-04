@@ -58,7 +58,6 @@ export const Action = forwardRef<HTMLButtonElement, SwipeActionsActionProps>(
         if (side === undefined) {
           return
         }
-        actionRef.current.width = width
         setMeasuredWidth(width)
         updateActionWidth?.(side, idRef.current, width)
       },

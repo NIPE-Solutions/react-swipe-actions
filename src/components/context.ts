@@ -20,7 +20,11 @@ export interface RootContextValue {
   fullSwipeThreshold: number
   registerContent(id: symbol, element: HTMLDivElement): () => void
   updateContentWidth(id: symbol, width: number): void
-  registerSide(side: SwipeActionsSide, id: symbol): () => void
+  registerSide(
+    side: SwipeActionsSide,
+    id: symbol,
+    element: HTMLDivElement,
+  ): () => void
   updateSideWidth(side: SwipeActionsSide, id: symbol, width: number): void
   registerAction(
     side: SwipeActionsSide,

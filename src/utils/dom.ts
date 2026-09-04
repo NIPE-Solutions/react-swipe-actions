@@ -17,6 +17,13 @@ const FOCUSABLE_SELECTOR = [
   '[contenteditable]:not([contenteditable="false"])',
 ].join(',')
 
+const EDITABLE_SELECTOR = [
+  'input',
+  'select',
+  'textarea',
+  '[contenteditable]:not([contenteditable="false"])',
+].join(',')
+
 const originalAriaHidden = new WeakMap<HTMLElement, string | null>()
 const originalTabIndexes = new WeakMap<
   HTMLElement,
@@ -26,6 +33,11 @@ const originalTabIndexes = new WeakMap<
 export function isInteractiveTarget(target: EventTarget | null): boolean {
   const element = targetElement(target)
   return element?.closest(INTERACTIVE_SELECTOR) !== null
+}
+
+export function isEditableTarget(target: EventTarget | null): boolean {
+  const element = targetElement(target)
+  return element?.closest(EDITABLE_SELECTOR) !== null
 }
 
 export function focusFirstEnabled(container: HTMLElement): boolean {
@@ -57,10 +69,16 @@ export function setSubtreeInert(element: HTMLElement, inert: boolean): void {
     const tabIndexes = originalTabIndexes.get(element) ?? new Map()
     originalTabIndexes.set(element, tabIndexes)
 
-    for (const candidate of element.querySelectorAll<HTMLElement>(
-      FOCUSABLE_SELECTOR,
-    )) {
-      if (candidate.tabIndex < 0 || tabIndexes.has(candidate)) {
+    const candidates = [
+      ...(element.matches(FOCUSABLE_SELECTOR) ? [element] : []),
+      ...element.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+    ]
+    for (const candidate of candidates) {
+      if (tabIndexes.has(candidate)) {
+        candidate.setAttribute('tabindex', '-1')
+        continue
+      }
+      if (candidate.tabIndex < 0) {
         continue
       }
 

@@ -47,8 +47,12 @@ describe('SwipeActions actions and configuration', () => {
       </Root>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Archive' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Disabled' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Archive', hidden: true }),
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Disabled', hidden: true }),
+    )
 
     expect(enabledAction).toHaveBeenCalledOnce()
     expect(disabledAction).not.toHaveBeenCalled()
@@ -182,7 +186,7 @@ describe('SwipeActions actions and configuration', () => {
     )
 
     expect(registry?.measurements().trailing.fullSwipeAction?.element).toBe(
-      screen.getByRole('button', { name: 'Second' }),
+      screen.getByRole('button', { name: 'Second', hidden: true }),
     )
     expect(console.warn).not.toHaveBeenCalled()
 
@@ -205,7 +209,7 @@ describe('SwipeActions actions and configuration', () => {
       expect.stringMatching(/more than one enabled.*fullSwipe.*first enabled/i),
     )
     expect(registry?.measurements().trailing.fullSwipeAction?.element).toBe(
-      screen.getByRole('button', { name: 'First' }),
+      screen.getByRole('button', { name: 'First', hidden: true }),
     )
   })
 

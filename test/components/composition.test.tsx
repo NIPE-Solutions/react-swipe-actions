@@ -53,9 +53,13 @@ describe('SwipeActions compound components', () => {
     }).parentElement
     const trailing = screen.getByRole('button', {
       name: 'Delete',
+      hidden: true,
     }).parentElement
     const archive = screen.getByRole('button', { name: 'Archive' })
-    const remove = screen.getByRole('button', { name: 'Delete' })
+    const remove = screen.getByRole('button', {
+      name: 'Delete',
+      hidden: true,
+    })
 
     expect(root).toHaveAttribute('data-state', 'open')
     expect(root).toHaveAttribute('data-disabled', '')

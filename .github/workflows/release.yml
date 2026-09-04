@@ -73,8 +73,50 @@ jobs:
         with:
           name: npm-package-alpha
           path: release-artifact
-      - name: Verify promoted artifact checksum
+      - name: Validate and publish verified artifact
+        env:
+          RELEASE_TARBALL: ${{ needs.verify.outputs.tarball }}
+          RELEASE_CHANNEL: ${{ needs.verify.outputs.channel }}
         working-directory: release-artifact
-        run: sha512sum --check --strict "${{ needs.verify.outputs.tarball }}.sha512"
-      - name: Publish verified artifact with provenance
-        run: npm publish "release-artifact/${{ needs.verify.outputs.tarball }}" --ignore-scripts --provenance --access public --tag "${{ needs.verify.outputs.channel }}"
+        run: |
+          set -euo pipefail
+
+          if [[ "$RELEASE_CHANNEL" != "alpha" ]]; then
+            echo "Release channel must be alpha" >&2
+            exit 1
+          fi
+
+          expected_tarball="nipe-solutions-react-swipe-actions-0.1.0-alpha.0.tgz"
+          if [[ ! "$RELEASE_TARBALL" =~ ^[A-Za-z0-9._-]+$ ]] || [[ "$RELEASE_TARBALL" != "$expected_tarball" ]]; then
+            echo "Unsafe release tarball: expected $expected_tarball" >&2
+            exit 1
+          fi
+
+          manifest="${RELEASE_TARBALL}.sha512"
+          shopt -s nullglob
+          manifests=(*.sha512)
+          if (( ${#manifests[@]} != 1 )) || [[ "${manifests[0]}" != "$manifest" ]]; then
+            echo "Checksum manifest name must exactly match $manifest" >&2
+            exit 1
+          fi
+          if [[ ! -f "$RELEASE_TARBALL" ]] || [[ ! -f "$manifest" ]]; then
+            echo "Verified tarball or checksum manifest is missing" >&2
+            exit 1
+          fi
+          if [[ "$(wc -l < "$manifest")" -ne 1 ]]; then
+            echo "Checksum manifest must contain exactly one entry" >&2
+            exit 1
+          fi
+
+          manifest_line="$(<"$manifest")"
+          if [[ ! "$manifest_line" =~ ^([[:xdigit:]]{128})[[:space:]][[:space:]]([A-Za-z0-9._-]+)$ ]]; then
+            echo "Checksum manifest must contain one SHA-512 entry" >&2
+            exit 1
+          fi
+          if [[ "${BASH_REMATCH[2]}" != "$RELEASE_TARBALL" ]]; then
+            echo "Checksum manifest filename must match the release tarball" >&2
+            exit 1
+          fi
+
+          sha512sum --check --strict -- "$manifest"
+          npm publish --ignore-scripts --provenance --access public --tag "$RELEASE_CHANNEL" -- "$RELEASE_TARBALL"

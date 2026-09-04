@@ -31,16 +31,47 @@ export const installCommand = `npm install ${packageName}`
 
 export const canonicalCode = `import { SwipeActions as S } from
   '${packageName}'
+import
+  '${packageName}/core.css'
+
+const archive = () => {}
 
 <S.Root>
   <S.Leading>
-    <S.Action>Archive</S.Action>
+    <S.Action onAction={archive}>Archive</S.Action>
   </S.Leading>
   <S.Content>Quarterly planning</S.Content>
-  <S.Trailing>
-    <S.Action fullSwipe>Delete</S.Action>
-  </S.Trailing>
 </S.Root>`
+
+export const completeCanonicalCode = `import {
+  Action,
+  Content,
+  Leading,
+  Root,
+  Trailing,
+} from '${packageName}'
+import '${packageName}/core.css'
+
+interface MessageRowProps {
+  onArchive: () => void
+  onRemove: () => void
+}
+
+export function MessageRow({ onArchive, onRemove }: MessageRowProps) {
+  return (
+    <Root aria-label="Quarterly planning actions">
+      <Leading>
+        <Action onAction={onArchive}>Archive</Action>
+      </Leading>
+      <Content>Quarterly planning</Content>
+      <Trailing>
+        <Action destructive fullSwipe onAction={onRemove}>
+          Delete
+        </Action>
+      </Trailing>
+    </Root>
+  )
+}`
 
 export const controlledCode = `import { Root, type SwipeActionsOpenSide } from '${packageName}'
 

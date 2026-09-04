@@ -290,13 +290,45 @@ main {
   overflow-wrap: anywhere;
 }
 
+.quick-start__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-block-size: 34px;
+}
+
+.quick-start__heading h2 {
+  margin: 0;
+}
+
 .quick-start__more {
   display: inline-flex;
   align-items: center;
   min-block-size: 34px;
-  margin-block-start: 4px;
   font-size: 12px;
   font-weight: 690;
+}
+
+.complete-example {
+  display: grid;
+  gap: 10px;
+  scroll-margin-block-start: 24px;
+}
+
+.complete-example__heading h3,
+.complete-example__heading p {
+  margin: 0;
+}
+
+.complete-example__heading h3 {
+  font-size: 15px;
+}
+
+.complete-example__heading p {
+  margin-block-start: 3px;
+  color: #59677b;
+  font-size: 12px;
 }
 
 .install-panel > p {
@@ -1354,6 +1386,9 @@ kbd {
   .install-panel h2,
   .quick-start h2 {
     margin-block-end: 2px;
+  }
+  .quick-start__heading h2 {
+    margin: 0;
   }
   .install-panel > p {
     margin-block-start: 4px;

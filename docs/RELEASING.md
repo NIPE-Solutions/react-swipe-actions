@@ -55,6 +55,6 @@ bypass a missing trusted-publisher configuration. Record the workflow run,
 published version, provenance link, tarball inventory, browser evidence, and
 any manual-device checks with the release record.
 
-The current alpha work is not being published. Until a maintainer explicitly
-approves the protected release environment and triggers that workflow, this
-guide remains a review procedure and dry-run checklist.
+Each prerelease is published only after a maintainer explicitly approves the
+release, confirms the protected environment and triggers the workflow. Until
+then, this guide remains a review procedure and dry-run checklist.

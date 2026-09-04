@@ -37,6 +37,15 @@ function KeyboardRow({
         <input aria-label="Subject" />
         <button type="button">Open message</button>
         <a href="#message">Open message link</a>
+        <div role="slider" tabIndex={0} data-testid="custom-slider">
+          Volume
+        </div>
+        <details>
+          <summary data-testid="summary">Message details</summary>
+        </details>
+        <audio controls data-testid="audio" />
+        <video controls data-testid="video" />
+        <span data-testid="plain-content">Plain metadata</span>
       </Content>
       <Trailing data-testid="trailing">
         <Action onAction={() => undefined}>Delete</Action>
@@ -76,6 +85,55 @@ describe('SwipeActions keyboard disclosure', () => {
       )
     },
   )
+
+  it.each([
+    ['custom role control', 'custom-slider'],
+    ['summary', 'summary'],
+    ['audio controls', 'audio'],
+    ['video controls', 'video'],
+  ] as const)(
+    'does not steal physical arrows from %s descendants',
+    (_label, testId) => {
+      // Catches keyboard controls outside the pointer-interactive selector opening a side.
+      const onOpenSideChange = vi.fn()
+      render(<KeyboardRow onOpenSideChange={onOpenSideChange} />)
+      const target = screen.getByTestId(testId)
+      const left = new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'ArrowLeft',
+      })
+      const right = new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'ArrowRight',
+      })
+
+      fireEvent(target, left)
+      fireEvent(target, right)
+
+      expect(onOpenSideChange).not.toHaveBeenCalled()
+      expect(left.defaultPrevented).toBe(false)
+      expect(right.defaultPrevented).toBe(false)
+      expect(screen.getByTestId('root')).toHaveAttribute('data-state', 'closed')
+    },
+  )
+
+  it('keeps ordinary noninteractive descendants eligible for arrow disclosure', () => {
+    // Catches an over-broad keyboard guard disabling disclosure from normal row content.
+    const onOpenSideChange = vi.fn()
+    render(<KeyboardRow onOpenSideChange={onOpenSideChange} />)
+    const arrow = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'ArrowLeft',
+    })
+
+    fireEvent(screen.getByTestId('plain-content'), arrow)
+
+    expect(onOpenSideChange).toHaveBeenCalledExactlyOnceWith('leading')
+    expect(arrow.defaultPrevented).toBe(true)
+  })
 
   it('ignores Root shortcuts from editable controls, modified keys, and handled descendants', () => {
     // Catches disclosure stealing editing keys, browser shortcuts, or descendant-owned events.

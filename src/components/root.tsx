@@ -25,7 +25,7 @@ import { physicalSign, sideFromArrowKey } from '../state/direction'
 import {
   focusFirstEnabled,
   isEditableTarget,
-  isInteractiveTarget,
+  isKeyboardInteractiveTarget,
 } from '../utils/dom'
 import { warnOnce } from '../utils/warn'
 import { GroupContext, RootContext } from './context'
@@ -604,7 +604,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
 
             if (
               event.target !== event.currentTarget &&
-              isInteractiveTarget(event.target)
+              isKeyboardInteractiveTarget(event.target, event.currentTarget)
             ) {
               return
             }

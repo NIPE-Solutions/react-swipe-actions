@@ -200,4 +200,31 @@ describe('setSubtreeInert', () => {
     expect(input).toHaveAttribute('type', 'text')
     expect(audio).toHaveAttribute('controls')
   })
+
+  it('releases moved descendants without overwriting later consumer tabindex changes', async () => {
+    // Catches the inert session continuing to own controls after they leave its subtree.
+    document.body.innerHTML = `
+      <section id="actions">
+        <button id="unchanged" tabindex="2">Unchanged</button>
+        <button id="changed" tabindex="3">Changed</button>
+      </section>
+      <main id="content"></main>
+    `
+    const actions = document.querySelector<HTMLElement>('#actions')!
+    const content = document.querySelector<HTMLElement>('#content')!
+    const unchanged = document.querySelector<HTMLElement>('#unchanged')!
+    const changed = document.querySelector<HTMLElement>('#changed')!
+    setSubtreeInert(actions, true)
+
+    content.append(unchanged, changed)
+    changed.setAttribute('tabindex', '4')
+    await Promise.resolve()
+
+    expect(unchanged).toHaveAttribute('tabindex', '2')
+    expect(changed).toHaveAttribute('tabindex', '4')
+
+    setSubtreeInert(actions, false)
+    expect(unchanged).toHaveAttribute('tabindex', '2')
+    expect(changed).toHaveAttribute('tabindex', '4')
+  })
 })

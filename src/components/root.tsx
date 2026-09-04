@@ -10,6 +10,13 @@ import {
   useRef,
 } from 'react'
 import type { CSSProperties } from 'react'
+import { createGestureController } from '../gesture/controller'
+import type {
+  GestureController,
+  GesturePointerEvent,
+} from '../gesture/controller'
+import { createAnimator } from '../motion/animator'
+import type { AnimationResult } from '../motion/animator'
 import type { SwipeActionsHandle, SwipeActionsRootProps } from '../public-types'
 import type { SwipeActionsDirection, SwipeActionsSide } from '../public-types'
 import { useControllableOpenSide } from '../state/controllable'
@@ -26,10 +33,18 @@ interface SideContainerRegistration {
   width: number
 }
 
+interface ContentRegistration {
+  element: HTMLDivElement
+  width: number
+}
+
 interface RootMotionAdapter {
   readOffset(): number
   writeOffset(offset: number): void
-  cancel(): void
+  settle(offset: number, velocity: number): Promise<AnimationResult>
+  cancel(): boolean
+  measurements(): MeasurementSnapshot
+  direction(): SwipeActionsDirection
 }
 
 const DEFAULT_OPEN_THRESHOLD = 0.35
@@ -75,7 +90,9 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     const requestOpenSideRef = useRef<(side: SwipeActionsSide | null) => void>(
       () => undefined,
     )
-    const contentRegistrationsRef = useRef(new Map<symbol, number>())
+    const contentRegistrationsRef = useRef(
+      new Map<symbol, ContentRegistration>(),
+    )
     const sideRegistrationsRef = useRef({
       leading: new Map<symbol, SideContainerRegistration>(),
       trailing: new Map<symbol, SideContainerRegistration>(),
@@ -87,6 +104,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     const reconcileScheduledRef = useRef(false)
     const mountedRef = useRef(false)
     const motionRef = useRef<RootMotionAdapter | null>(null)
+    const gestureRef = useRef<GestureController | null>(null)
     const [openSide, requestOpenSide] = useControllableOpenSide({
       value: controlledOpenSide,
       defaultValue: defaultOpenSide,
@@ -102,11 +120,15 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     const fullSwipeThreshold = thresholdsAreValid
       ? requestedFullSwipeThreshold
       : DEFAULT_FULL_SWIPE_THRESHOLD
+    const openThresholdRef = useRef(openThreshold)
+    const fullSwipeThresholdRef = useRef(fullSwipeThreshold)
 
     disabledRef.current = disabled
     openSideRef.current = openSide
     directionRef.current = resolvedDirection
     requestOpenSideRef.current = requestOpenSide
+    openThresholdRef.current = openThreshold
+    fullSwipeThresholdRef.current = fullSwipeThreshold
 
     const measurements = useCallback((): MeasurementSnapshot => {
       const leadingContainer = firstValue(sideRegistrationsRef.current.leading)
@@ -121,7 +143,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         .next().value
 
       return {
-        contentWidth: firstValue(contentRegistrationsRef.current) ?? 0,
+        contentWidth: firstValue(contentRegistrationsRef.current)?.width ?? 0,
         leading: {
           width: leadingContainer?.width ?? 0,
           fullSwipeAction:
@@ -149,6 +171,20 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
       )
     }
 
+    if (gestureRef.current === null) {
+      gestureRef.current = createGestureController({
+        motion: motionRef.current,
+        isDisabled: () => disabledRef.current,
+        getOpenSide: () => openSideRef.current,
+        getOpenThreshold: () => openThresholdRef.current,
+        getFullSwipeThreshold: () => fullSwipeThresholdRef.current,
+        requestOpenSide: (side) => requestOpenSideRef.current(side),
+        setPhase: (phase) => {
+          elementRef.current?.setAttribute('data-state', phase)
+        },
+      })
+    }
+
     const reconcileMeasurements = useCallback(() => {
       if (reconcileScheduledRef.current) {
         return
@@ -166,29 +202,17 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
           return
         }
 
-        motion.cancel()
+        gestureRef.current?.cancel('configuration')
         const side = openSideRef.current
-        if (side === null) {
-          motion.writeOffset(0)
-          return
-        }
-
-        if (sideRegistrationsRef.current[side].size === 0) {
-          motion.writeOffset(0)
+        if (side !== null && sideRegistrationsRef.current[side].size === 0) {
           requestOpenSideRef.current(null)
-          return
         }
-
-        const snapshot = measurements()
-        const width = snapshot[side].width
-        const sign = physicalSign(side, directionRef.current)
-        motion.writeOffset(sign * width)
       })
     }, [measurements])
 
     const registerContent = useCallback(
-      (id: symbol) => {
-        contentRegistrationsRef.current.set(id, 0)
+      (id: symbol, element: HTMLDivElement) => {
+        contentRegistrationsRef.current.set(id, { element, width: 0 })
         reconcileMeasurements()
 
         return () => {
@@ -204,7 +228,10 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         if (!contentRegistrationsRef.current.has(id)) {
           return
         }
-        contentRegistrationsRef.current.set(id, width)
+        const registration = contentRegistrationsRef.current.get(id)
+        if (registration !== undefined) {
+          registration.width = width
+        }
         reconcileMeasurements()
       },
       [reconcileMeasurements],
@@ -352,7 +379,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
 
       return () => {
         mountedRef.current = false
-        motionRef.current?.cancel()
+        gestureRef.current?.cancel('unmount')
       }
     }, [reconcileMeasurements])
 
@@ -374,6 +401,18 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         updateActionWidth,
         configurationChanged,
         measurements,
+        gesture: {
+          onPointerDown: (event: GesturePointerEvent) =>
+            gestureRef.current?.onPointerDown(event),
+          onPointerMove: (event: GesturePointerEvent) =>
+            gestureRef.current?.onPointerMove(event),
+          onPointerUp: (event: GesturePointerEvent) =>
+            gestureRef.current?.onPointerUp(event),
+          onPointerCancel: (event: GesturePointerEvent) =>
+            gestureRef.current?.onPointerCancel(event),
+          onLostPointerCapture: (event: GesturePointerEvent) =>
+            gestureRef.current?.onLostPointerCapture(event),
+        },
       }),
       [
         resolvedDirection,
@@ -409,6 +448,12 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
           data-swipe-actions-root=""
           data-state={openSide === null ? 'closed' : 'open'}
           data-disabled={disabled ? '' : undefined}
+          onClickCapture={(event) => {
+            const suppressed = gestureRef.current?.onClickCapture(event)
+            if (!suppressed) {
+              rootProps.onClickCapture?.(event)
+            }
+          }}
         >
           {children}
         </div>
@@ -455,37 +500,108 @@ function createRootMotionAdapter(
 ): RootMotionAdapter {
   let offset = 0
 
-  return {
-    readOffset: () => offset,
-    writeOffset(nextOffset) {
-      offset = Number.isFinite(nextOffset) ? nextOffset : 0
-      const element = elementRef.current
-      if (element === null) {
-        return
-      }
+  const readOffset = () => {
+    const content = firstContentElement(elementRef.current)
+    if (content === null || typeof getComputedStyle === 'undefined') {
+      return offset
+    }
 
-      const snapshot = measurements()
-      const leadingSign = physicalSign('leading', directionRef.current)
-      const logicalOffset = offset * leadingSign
-      const activeSide =
-        logicalOffset > 0 ? 'leading' : logicalOffset < 0 ? 'trailing' : null
-      const activeWidth = activeSide === null ? 0 : snapshot[activeSide].width
-      const progress =
-        activeWidth > 0 ? Math.min(1, Math.abs(offset) / activeWidth) : 0
-
-      element.style.setProperty('--swipe-actions-offset', `${offset}px`)
-      element.style.setProperty('--swipe-actions-progress', String(progress))
-      element.style.setProperty(
-        '--swipe-actions-leading-progress',
-        activeSide === 'leading' ? String(progress) : '0',
-      )
-      element.style.setProperty(
-        '--swipe-actions-trailing-progress',
-        activeSide === 'trailing' ? String(progress) : '0',
-      )
-    },
-    cancel() {
-      offset = Number.isFinite(offset) ? offset : 0
-    },
+    return readTranslateX(getComputedStyle(content).transform, offset)
   }
+
+  const animator = createAnimator({
+    read: readOffset,
+    write: writeOffset,
+    now: () => performance.now(),
+    requestFrame: (callback) => {
+      const view = elementRef.current?.ownerDocument.defaultView
+      return (
+        view?.requestAnimationFrame(callback) ?? requestAnimationFrame(callback)
+      )
+    },
+    cancelFrame: (frame) => {
+      const view = elementRef.current?.ownerDocument.defaultView
+      if (view !== null && view !== undefined) {
+        view.cancelAnimationFrame(frame)
+      } else {
+        cancelAnimationFrame(frame)
+      }
+    },
+  })
+
+  function writeOffset(nextOffset: number) {
+    offset = Number.isFinite(nextOffset) ? nextOffset : 0
+    const element = elementRef.current
+    if (element === null) {
+      return
+    }
+
+    const snapshot = measurements()
+    const leadingSign = physicalSign('leading', directionRef.current)
+    const logicalOffset = offset * leadingSign
+    const activeSide =
+      logicalOffset > 0 ? 'leading' : logicalOffset < 0 ? 'trailing' : null
+    const activeWidth = activeSide === null ? 0 : snapshot[activeSide].width
+    const progress =
+      activeWidth > 0 ? Math.min(1, Math.abs(offset) / activeWidth) : 0
+
+    element.style.setProperty('--swipe-actions-offset', `${offset}px`)
+    element.style.setProperty('--swipe-actions-progress', String(progress))
+    element.style.setProperty(
+      '--swipe-actions-leading-progress',
+      activeSide === 'leading' ? String(progress) : '0',
+    )
+    element.style.setProperty(
+      '--swipe-actions-trailing-progress',
+      activeSide === 'trailing' ? String(progress) : '0',
+    )
+    const content = firstContentElement(element)
+    if (content !== null) {
+      content.style.transform = `translate3d(${offset}px, 0, 0)`
+    }
+  }
+
+  return {
+    readOffset,
+    writeOffset,
+    settle: (target, velocity) => animator.animateTo(target, { velocity }),
+    cancel() {
+      const wasAnimating = animator.isAnimating()
+      animator.cancel()
+      offset = readOffset()
+      return wasAnimating
+    },
+    measurements,
+    direction: () => directionRef.current,
+  }
+}
+
+function firstContentElement(root: HTMLDivElement | null) {
+  return (
+    root?.querySelector<HTMLDivElement>('[data-swipe-actions-content]') ?? null
+  )
+}
+
+function readTranslateX(transform: string, fallback: number) {
+  if (transform === '' || transform === 'none') {
+    return fallback
+  }
+
+  const matrix3d = transform.match(/^matrix3d\((.+)\)$/)
+  if (matrix3d?.[1] !== undefined) {
+    const value = Number(matrix3d[1].split(',')[12])
+    return Number.isFinite(value) ? value : fallback
+  }
+
+  const matrix = transform.match(/^matrix\((.+)\)$/)
+  if (matrix?.[1] !== undefined) {
+    const value = Number(matrix[1].split(',')[4])
+    return Number.isFinite(value) ? value : fallback
+  }
+
+  const translate = transform.match(
+    /^translate(?:3d|X)?\(\s*(-?\d+(?:\.\d+)?)px/,
+  )
+  const value = Number(translate?.[1])
+  return Number.isFinite(value) ? value : fallback
 }

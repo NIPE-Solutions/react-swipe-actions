@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { execFile } from 'node:child_process'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
+import { promisify } from 'node:util'
 import { parse } from 'yaml'
 
+const execFileAsync = promisify(execFile)
 const repositoryRoot = path.resolve(import.meta.dirname, '..')
 
 async function readYaml(relativePath) {
@@ -173,16 +176,40 @@ function validateReleaseWorkflow(workflow) {
   assert.equal(downloadStep?.with?.name, 'npm-package-alpha')
   assert.equal(downloadStep?.with?.path, 'release-artifact')
 
-  const expectedPublish =
-    'npm publish "release-artifact/${{ needs.verify.outputs.tarball }}" --ignore-scripts --provenance --access public --tag "${{ needs.verify.outputs.channel }}"'
+  const protectedStep = publishSteps.at(-1)
   assert.equal(
-    publishSteps.at(-1).run,
-    expectedPublish,
-    'npm publish must be the final privileged step',
+    protectedStep.name,
+    'Validate and publish verified artifact',
+    'validated npm publish must be the final privileged step',
   )
-  assert.equal(publishCommands.length, 2)
-  assert.match(publishCommands[0], /sha512sum --check --strict/)
-  assert.equal(publishCommands[1], expectedPublish)
+  assert.deepEqual(protectedStep.env, {
+    RELEASE_TARBALL: '${{ needs.verify.outputs.tarball }}',
+    RELEASE_CHANNEL: '${{ needs.verify.outputs.channel }}',
+  })
+  assert.equal(publishCommands.length, 1)
+  assert.doesNotMatch(
+    protectedStep.run,
+    /\$\{\{[^}]*needs\.[^}]*outputs/,
+    'OIDC shell must not interpolate job outputs directly',
+  )
+  assert.match(protectedStep.run, /RELEASE_CHANNEL.*alpha/)
+  assert.match(
+    protectedStep.run,
+    /nipe-solutions-react-swipe-actions-0\.1\.0-alpha\.0\.tgz/,
+  )
+  assert.match(protectedStep.run, /\^\[A-Za-z0-9\._-\]\+\$/)
+  assert.match(protectedStep.run, /exactly one entry/)
+  assert.match(protectedStep.run, /manifest filename/)
+  assert.match(protectedStep.run, /sha512sum --check --strict --/)
+  assert.match(
+    protectedStep.run,
+    /npm publish --ignore-scripts --provenance --access public --tag "\$RELEASE_CHANNEL" -- "\$RELEASE_TARBALL"/,
+  )
+  assert.equal(
+    protectedStep.run.trimEnd().split('\n').at(-1),
+    'npm publish --ignore-scripts --provenance --access public --tag "$RELEASE_CHANNEL" -- "$RELEASE_TARBALL"',
+    'npm publish must be the final privileged command',
+  )
   assert.doesNotMatch(
     publishCommands.join('\n'),
     /npm ci|npm run|npm pack|npx |node scripts\//,
@@ -253,6 +280,17 @@ test('release policy rejects long-lived npm credentials', async () => {
   assert.throws(
     () => validateReleaseWorkflow(workflow),
     /NODE_AUTH_TOKEN|NPM_TOKEN|secrets/,
+  )
+})
+
+test('release policy rejects direct job-output interpolation in OIDC shell', async () => {
+  const workflow = await readYaml('.github/workflows/release.yml')
+  workflow.jobs.publish.steps.at(-1).run +=
+    '\necho "${{ needs.verify.outputs.tarball }}"'
+
+  assert.throws(
+    () => validateReleaseWorkflow(workflow),
+    /must not interpolate job outputs directly/,
   )
 })
 
@@ -509,6 +547,115 @@ test('release output mode preserves a named tarball with a verifiable checksum',
     assert.equal(
       await readFile(`${tarballPath}.sha512`, 'utf8'),
       `${checksum.digest}  package.tgz\n`,
+    )
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('protected release shell treats output mutation payloads only as data', async () => {
+  const workflow = await readYaml('.github/workflows/release.yml')
+  const protectedStep = workflow.jobs.publish.steps.at(-1)
+  assert.deepEqual(protectedStep.env, {
+    RELEASE_TARBALL: '${{ needs.verify.outputs.tarball }}',
+    RELEASE_CHANNEL: '${{ needs.verify.outputs.channel }}',
+  })
+
+  const directory = await mkdtemp(path.join(tmpdir(), 'release-shell-test-'))
+  const sentinel = path.join(directory, 'injection-ran')
+  const payloads = [
+    `$(touch ${sentinel})`,
+    '../package.tgz',
+    'package.tgz\nsecond-command',
+    'package.tgz; touch injection-ran',
+  ]
+
+  try {
+    for (const payload of payloads) {
+      await assert.rejects(
+        execFileAsync('bash', ['-c', protectedStep.run], {
+          cwd: directory,
+          env: {
+            ...process.env,
+            RELEASE_TARBALL: payload,
+            RELEASE_CHANNEL: 'alpha',
+          },
+        }),
+        (error) => {
+          assert.match(error.stderr, /unsafe release tarball/i)
+          return true
+        },
+      )
+    }
+    await assert.rejects(readFile(sentinel), { code: 'ENOENT' })
+
+    await assert.rejects(
+      execFileAsync('bash', ['-c', protectedStep.run], {
+        cwd: directory,
+        env: {
+          ...process.env,
+          RELEASE_TARBALL:
+            'nipe-solutions-react-swipe-actions-0.1.0-alpha.0.tgz',
+          RELEASE_CHANNEL: 'alpha\n$(touch injection-ran)',
+        },
+      }),
+      (error) => {
+        assert.match(error.stderr, /release channel must be alpha/i)
+        return true
+      },
+    )
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('protected release shell rejects extra or mismatched checksum entries', async () => {
+  const workflow = await readYaml('.github/workflows/release.yml')
+  const protectedStep = workflow.jobs.publish.steps.at(-1)
+  const directory = await mkdtemp(path.join(tmpdir(), 'release-manifest-test-'))
+  const artifactDirectory = path.join(directory, 'release-artifact')
+  const tarball = 'nipe-solutions-react-swipe-actions-0.1.0-alpha.0.tgz'
+  const digest =
+    'ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f'
+
+  try {
+    await mkdir(artifactDirectory)
+    await writeFile(path.join(artifactDirectory, tarball), 'abc')
+    const manifest = path.join(artifactDirectory, `${tarball}.sha512`)
+    await writeFile(
+      manifest,
+      `${digest}  ${tarball}\n${digest}  duplicate.tgz\n`,
+    )
+
+    await assert.rejects(
+      execFileAsync('bash', ['-c', protectedStep.run], {
+        cwd: artifactDirectory,
+        env: {
+          ...process.env,
+          RELEASE_TARBALL: tarball,
+          RELEASE_CHANNEL: 'alpha',
+        },
+      }),
+      (error) => {
+        assert.match(error.stderr, /exactly one entry/i)
+        return true
+      },
+    )
+
+    await writeFile(manifest, `${digest}  other-package.tgz\n`)
+    await assert.rejects(
+      execFileAsync('bash', ['-c', protectedStep.run], {
+        cwd: artifactDirectory,
+        env: {
+          ...process.env,
+          RELEASE_TARBALL: tarball,
+          RELEASE_CHANNEL: 'alpha',
+        },
+      }),
+      (error) => {
+        assert.match(error.stderr, /manifest filename/i)
+        return true
+      },
     )
   } finally {
     await rm(directory, { recursive: true, force: true })

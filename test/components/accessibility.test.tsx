@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
@@ -10,7 +10,7 @@ function ActionsRow({ disabled = false }: { disabled?: boolean }) {
       <Leading data-testid="leading">
         <Action onAction={() => undefined}>Archive</Action>
       </Leading>
-      <Content>
+      <Content data-testid="content">
         <button type="button">Open message</button>
       </Content>
       <Trailing data-testid="trailing">
@@ -125,5 +125,27 @@ describe('SwipeActions accessibility', () => {
     expect(
       screen.getByRole('button', { name: 'Dynamic action', hidden: true }),
     ).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('releases a control moved from a closed Side into active Content', async () => {
+    // Catches Side cleanup re-forcing or later restoring stale tabindex outside the Side.
+    render(<ActionsRow />)
+    const leading = screen.getByTestId('leading')
+    const content = screen.getByTestId('content')
+    const control = document.createElement('button')
+    control.textContent = 'Moved action'
+    leading.append(control)
+    await waitFor(() => expect(control).toHaveAttribute('tabindex', '-1'))
+
+    content.append(control)
+    control.setAttribute('tabindex', '3')
+    await Promise.resolve()
+
+    expect(control).toHaveAttribute('tabindex', '3')
+    control.focus()
+    expect(document.activeElement).toBe(control)
+
+    fireEvent.keyDown(screen.getByTestId('root'), { key: 'ArrowLeft' })
+    expect(control).toHaveAttribute('tabindex', '3')
   })
 })

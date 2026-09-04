@@ -103,6 +103,7 @@ export function setSubtreeInert(
       inertStates.set(element, state)
     } else {
       recordTabIndexChanges(state, state.observer?.takeRecords() ?? [])
+      releaseDetachedCandidates(element, state)
       updateRestoration(state, restoration)
     }
 
@@ -122,6 +123,7 @@ export function setSubtreeInert(
   }
 
   recordTabIndexChanges(state, state.observer?.takeRecords() ?? [])
+  releaseDetachedCandidates(element, state)
   updateRestoration(state, restoration)
   state.observer?.disconnect()
   inertStates.delete(element)
@@ -155,6 +157,7 @@ function createInertState(
 
   const observer = new MutationObserverConstructor((records) => {
     recordTabIndexChanges(state, records)
+    releaseDetachedCandidates(element, state)
     trackFocusableCandidates(element, state)
     forceTrackedTabIndexes(state)
     observer.takeRecords()
@@ -222,6 +225,19 @@ function forceTrackedTabIndexes(state: InertState) {
   }
 }
 
+function releaseDetachedCandidates(element: HTMLElement, state: InertState) {
+  for (const [candidate, value] of state.tabIndexes) {
+    if (element.contains(candidate)) {
+      continue
+    }
+
+    state.tabIndexes.delete(candidate)
+    if (candidate.getAttribute('tabindex') === '-1') {
+      restoreTabIndex(candidate, value)
+    }
+  }
+}
+
 function targetElement(target: EventTarget | null): Element | null {
   if (target === null || typeof target !== 'object') {
     return null
@@ -248,10 +264,14 @@ function restoreAriaHidden(element: HTMLElement, value: string | null) {
 
 function restoreTabIndexes(tabIndexes: Map<HTMLElement, string | null>) {
   for (const [candidate, value] of tabIndexes) {
-    if (value === null) {
-      candidate.removeAttribute('tabindex')
-    } else {
-      candidate.setAttribute('tabindex', value)
-    }
+    restoreTabIndex(candidate, value)
+  }
+}
+
+function restoreTabIndex(candidate: HTMLElement, value: string | null) {
+  if (value === null) {
+    candidate.removeAttribute('tabindex')
+  } else {
+    candidate.setAttribute('tabindex', value)
   }
 }

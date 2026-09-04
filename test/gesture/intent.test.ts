@@ -74,7 +74,6 @@ describe('release target resolution', () => {
         direction: 'ltr',
         rowWidth,
         widths,
-        openSide: 'leading',
         openThreshold: 0.35,
         fullSwipeThreshold: 0.7,
       }),
@@ -103,6 +102,54 @@ describe('release target resolution', () => {
       resolveRelease({
         offset: 224,
         velocity: 0,
+        direction: 'ltr',
+        rowWidth,
+        widths,
+        fullSwipeSides: { leading: true },
+        openThreshold: 0.35,
+        fullSwipeThreshold: 0.7,
+      }),
+    ).toEqual({ kind: 'activate', side: 'leading', offset: 320 })
+  })
+
+  it('does not activate an armed full swipe against a strong closing velocity', () => {
+    // Catches distance arming overriding a release that projects past closed.
+    expect(
+      resolveRelease({
+        offset: 225,
+        velocity: -2,
+        direction: 'ltr',
+        rowWidth,
+        widths,
+        fullSwipeSides: { leading: true },
+        openThreshold: 0.35,
+        fullSwipeThreshold: 0.7,
+      }),
+    ).toEqual({ kind: 'closed', side: null, offset: 0 })
+  })
+
+  it('does not velocity-activate below 15% real full-swipe travel', () => {
+    // Catches the velocity path treating 47px as the 48px minimum on a 320px row.
+    expect(
+      resolveRelease({
+        offset: 47,
+        velocity: 2,
+        direction: 'ltr',
+        rowWidth,
+        widths,
+        fullSwipeSides: { leading: true },
+        openThreshold: 0.35,
+        fullSwipeThreshold: 0.7,
+      }),
+    ).toEqual({ kind: 'open', side: 'leading', offset: 96 })
+  })
+
+  it('velocity-activates at exactly 15% real full-swipe travel', () => {
+    // Catches an exclusive minimum-travel comparison rejecting the 48px boundary.
+    expect(
+      resolveRelease({
+        offset: 48,
+        velocity: 2,
         direction: 'ltr',
         rowWidth,
         widths,

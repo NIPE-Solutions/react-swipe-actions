@@ -1,7 +1,7 @@
-.worktrees/
-.superpowers/
 node_modules/
 dist/
 coverage/
 playwright-report/
 test-results/
+package-lock.json
+docs/

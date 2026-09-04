@@ -25,6 +25,7 @@ const REQUIRED_SELECTOR_FRAGMENTS = [
   '[data-full-swipe]',
 ]
 const CORE_DECLARATIONS = new Set([
+  'content',
   'display',
   'inset-block',
   'inset-inline-end',

@@ -33,6 +33,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
+    "test:browser:geometry": "playwright test --config playwright.config.ts test/browser/geometry.spec.ts",
     "build:dist": "node scripts/check-css-contract.mjs && vite build && tsc --project tsconfig.build.json && node scripts/copy-styles.mjs && node scripts/check-css-contract.mjs dist/core.css dist/theme.css dist/styles.css",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build:dist",
     "clean": "rm -rf dist coverage"

@@ -33,7 +33,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
-    "build:dist": "vite build && tsc --project tsconfig.build.json",
+    "build:dist": "node scripts/check-css-contract.mjs && vite build && tsc --project tsconfig.build.json && node scripts/copy-styles.mjs && node scripts/check-css-contract.mjs dist/core.css dist/theme.css dist/styles.css",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build:dist",
     "clean": "rm -rf dist coverage"
   },
@@ -54,6 +54,7 @@
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
+    "css-tree": "^3.2.1",
     "eslint": "^10.9.1",
     "globals": "^17.12.0",
     "jsdom": "^30.0.1",

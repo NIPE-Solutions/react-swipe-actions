@@ -4,6 +4,7 @@ import type { Page } from '@playwright/test'
 declare global {
   interface Window {
     deliverObservedBoxes(): void
+    widenLeadingAction(): void
   }
 }
 
@@ -70,4 +71,32 @@ test('pre-arm expansion survives actual-size observer delivery without changing 
   expect(await Promise.all([side.boundingBox(), action.boundingBox()])).toEqual(
     naturalBoxes,
   )
+})
+
+test('an actual action-only resize cancels a live pre-arm expansion', async ({
+  page,
+}) => {
+  await page.goto('/test/browser/geometry.html')
+
+  const root = page.getByTestId('root')
+  const side = page.getByTestId('leading')
+  const action = page.getByTestId('leading-action')
+
+  await expect
+    .poll(() =>
+      action.evaluate((element) =>
+        element.style.getPropertyValue('--swipe-actions-action-width'),
+      ),
+    )
+    .not.toBe('')
+  const naturalSideBox = await side.boundingBox()
+
+  await dragTo(page)
+  await expect(action).toHaveAttribute('data-full-swipe-expanding', '')
+
+  await page.evaluate(() => window.widenLeadingAction())
+
+  await expect(root).toHaveAttribute('data-state', 'closed')
+  await expect(action).not.toHaveAttribute('data-full-swipe-expanding')
+  expect(await side.boundingBox()).toEqual(naturalSideBox)
 })

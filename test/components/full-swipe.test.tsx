@@ -218,6 +218,28 @@ describe('SwipeActions full swipe', () => {
     expect(row.trailingAction).not.toHaveAttribute('data-full-swipe-expanding')
   })
 
+  it('reconciles an action-only resize but ignores an identical action delivery', async () => {
+    // Catches Action pre-mutating the registered width before Root can compare it.
+    const row = await renderRow()
+
+    dispatchPointer(row.content, 'pointerdown', { clientX: 0, timeStamp: 1 })
+    dispatchPointer(row.content, 'pointermove', { clientX: 160, timeStamp: 10 })
+    frames.advance(16)
+
+    act(() => resizeObserverMock.emit(row.leadingAction, 80))
+    await act(() => Promise.resolve())
+
+    expect(row.root).toHaveAttribute('data-state', 'dragging')
+    expect(row.leadingAction).toHaveAttribute('data-full-swipe-expanding', '')
+
+    act(() => resizeObserverMock.emit(row.leadingAction, 112))
+    await act(() => Promise.resolve())
+
+    expect(row.root).toHaveAttribute('data-state', 'closed')
+    expect(row.root).toHaveStyle({ '--swipe-actions-offset': '0px' })
+    expect(row.leadingAction).not.toHaveAttribute('data-full-swipe-expanding')
+  })
+
   it('arms slow 71% travel, commits once, settles offscreen, and preserves the row', async () => {
     // Catches delayed/duplicate activation, missing expansion state, or library-owned row removal.
     const row = await renderRow()

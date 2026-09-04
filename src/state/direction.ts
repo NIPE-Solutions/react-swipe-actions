@@ -22,3 +22,16 @@ export function sideFromOffset(
       ? 'trailing'
       : 'leading'
 }
+
+export function sideFromArrowKey(
+  key: string,
+  direction: SwipeActionsDirection,
+): SwipeActionsSide | null {
+  if (key === 'ArrowLeft') {
+    return sideFromOffset(1, direction)
+  }
+  if (key === 'ArrowRight') {
+    return sideFromOffset(-1, direction)
+  }
+  return null
+}

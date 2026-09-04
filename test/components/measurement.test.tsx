@@ -87,7 +87,10 @@ describe('SwipeActions measurement', () => {
         <Content>Message</Content>
       </Root>,
     )
-    const action = screen.getByRole('button', { name: 'Archive' })
+    const action = screen.getByRole('button', {
+      name: 'Archive',
+      hidden: true,
+    })
 
     act(() => resizeObserverMock.emit(action, 72))
     expect(action).toHaveStyle({ '--swipe-actions-action-width': '72px' })
@@ -105,6 +108,7 @@ describe('SwipeActions measurement', () => {
     )
     const localizedAction = screen.getByRole('button', {
       name: 'In das Archiv verschieben',
+      hidden: true,
     })
 
     act(() => resizeObserverMock.emit(localizedAction, 176))

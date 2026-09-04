@@ -8,6 +8,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from 'react'
 import type { CSSProperties } from 'react'
 import { createGestureController } from '../gesture/controller'
@@ -20,7 +21,12 @@ import type { AnimationResult } from '../motion/animator'
 import type { SwipeActionsHandle, SwipeActionsRootProps } from '../public-types'
 import type { SwipeActionsDirection, SwipeActionsSide } from '../public-types'
 import { useControllableOpenSide } from '../state/controllable'
-import { physicalSign } from '../state/direction'
+import { physicalSign, sideFromArrowKey } from '../state/direction'
+import {
+  focusFirstEnabled,
+  isEditableTarget,
+  setSubtreeInert,
+} from '../utils/dom'
 import { warnOnce } from '../utils/warn'
 import { GroupContext, RootContext } from './context'
 import type {
@@ -30,6 +36,7 @@ import type {
 } from './context'
 
 interface SideContainerRegistration {
+  element: HTMLDivElement
   width: number
 }
 
@@ -43,6 +50,7 @@ interface RootMotionAdapter {
   writeOffset(offset: number): void
   settle(offset: number, velocity: number): Promise<AnimationResult>
   cancel(): boolean
+  setReducedMotion(reducedMotion: boolean): void
   measurements(): MeasurementSnapshot
   direction(): SwipeActionsDirection
   setArmedSide(side: SwipeActionsSide | null): void
@@ -80,8 +88,9 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     },
     forwardedRef,
   ) {
-    const resolvedDirection =
-      direction ?? (htmlDirection === 'rtl' ? 'rtl' : 'ltr')
+    const [computedDirection, setComputedDirection] =
+      useState<SwipeActionsDirection>(htmlDirection === 'rtl' ? 'rtl' : 'ltr')
+    const resolvedDirection = direction ?? computedDirection
     const group = useContext(GroupContext)
     const groupId = useId()
     const elementRef = useRef<HTMLDivElement>(null)
@@ -103,8 +112,11 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
       leading: new Map<symbol, RegisteredActionEntry>(),
       trailing: new Map<symbol, RegisteredActionEntry>(),
     })
+    const [hasActions, setHasActions] = useState(false)
     const reconcileScheduledRef = useRef(false)
     const mountedRef = useRef(false)
+    const previousOpenSideRef = useRef(openSideRef.current)
+    const pendingKeyboardFocusRef = useRef<SwipeActionsSide | null>(null)
     const motionRef = useRef<RootMotionAdapter | null>(null)
     const gestureRef = useRef<GestureController | null>(null)
     const [openSide, requestOpenSide] = useControllableOpenSide({
@@ -279,8 +291,15 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
       reconcileMeasurements()
     }, [reconcileMeasurements, validateFullSwipeClaimants])
 
+    const updateHasActions = useCallback(() => {
+      setHasActions(
+        actionRegistrationsRef.current.leading.size > 0 ||
+          actionRegistrationsRef.current.trailing.size > 0,
+      )
+    }, [])
+
     const registerSide = useCallback(
-      (side: SwipeActionsSide, id: symbol) => {
+      (side: SwipeActionsSide, id: symbol, element: HTMLDivElement) => {
         if (sideRegistrationsRef.current[side].size > 0) {
           const componentName = side === 'leading' ? 'Leading' : 'Trailing'
           warnOnce(
@@ -288,7 +307,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
             `SwipeActions.Root received more than one SwipeActions.${componentName} container. Keep one SwipeActions.${componentName}; the first mounted container is used.`,
           )
         }
-        sideRegistrationsRef.current[side].set(id, { width: 0 })
+        sideRegistrationsRef.current[side].set(id, { element, width: 0 })
         configurationChanged()
 
         return () => {
@@ -322,14 +341,16 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
           containerId,
           action,
         })
+        updateHasActions()
         configurationChanged()
 
         return () => {
           actionRegistrationsRef.current[side].delete(id)
+          updateHasActions()
           configurationChanged()
         }
       },
-      [configurationChanged],
+      [configurationChanged, updateHasActions],
     )
 
     const updateActionWidth = useCallback(
@@ -391,8 +412,117 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     }, [reconcileMeasurements])
 
     useLayoutEffect(() => {
+      const element = elementRef.current
+      if (element === null || direction !== undefined) {
+        return
+      }
+
+      const view = element.ownerDocument.defaultView
+      const reconcileDirection = () => {
+        const nextDirection = readComputedDirection(element, view)
+        if (nextDirection === directionRef.current) {
+          return
+        }
+
+        directionRef.current = nextDirection
+        gestureRef.current?.cancel('configuration')
+        setComputedDirection(nextDirection)
+      }
+
+      reconcileDirection()
+
+      const MutationObserverConstructor =
+        view?.MutationObserver ??
+        (typeof MutationObserver === 'undefined' ? null : MutationObserver)
+      if (MutationObserverConstructor === null) {
+        return
+      }
+
+      const observer = new MutationObserverConstructor(reconcileDirection)
+      let ancestor: HTMLElement | null = element
+      while (ancestor !== null) {
+        observer.observe(ancestor, {
+          attributes: true,
+          attributeFilter: ['dir'],
+        })
+        ancestor = ancestor.parentElement
+      }
+
+      return () => observer.disconnect()
+    }, [direction])
+
+    useLayoutEffect(() => {
+      const view = elementRef.current?.ownerDocument.defaultView
+      if (
+        view === null ||
+        view === undefined ||
+        typeof view.matchMedia !== 'function'
+      ) {
+        return
+      }
+
+      const mediaQuery = view.matchMedia('(prefers-reduced-motion: reduce)')
+      const reconcileMotionPreference = () => {
+        motionRef.current?.setReducedMotion(mediaQuery.matches)
+      }
+      reconcileMotionPreference()
+
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', reconcileMotionPreference)
+        return () => {
+          mediaQuery.removeEventListener('change', reconcileMotionPreference)
+        }
+      }
+
+      mediaQuery.addListener(reconcileMotionPreference)
+      return () => mediaQuery.removeListener(reconcileMotionPreference)
+    }, [])
+
+    useLayoutEffect(() => {
       reconcileMeasurements()
     }, [disabled, openSide, reconcileMeasurements, resolvedDirection])
+
+    useLayoutEffect(() => {
+      const element = elementRef.current
+      if (element === null) {
+        return
+      }
+
+      const activeElement = element.ownerDocument.activeElement
+      const previousSide = previousOpenSideRef.current
+      const previousContainer =
+        previousSide === null
+          ? undefined
+          : firstValue(sideRegistrationsRef.current[previousSide])?.element
+      const restoreRootFocus =
+        previousSide !== null &&
+        previousSide !== openSide &&
+        activeElement !== null &&
+        previousContainer?.contains(activeElement) === true
+
+      for (const side of ['leading', 'trailing'] as const) {
+        for (const registration of sideRegistrationsRef.current[
+          side
+        ].values()) {
+          setSubtreeInert(registration.element, side !== openSide)
+        }
+      }
+
+      const pendingSide = pendingKeyboardFocusRef.current
+      if (pendingSide !== null && pendingSide === openSide) {
+        pendingKeyboardFocusRef.current = null
+        const container = firstValue(
+          sideRegistrationsRef.current[pendingSide],
+        )?.element
+        if (container !== undefined) {
+          focusFirstEnabled(container)
+        }
+      } else if (restoreRootFocus) {
+        element.focus()
+      }
+
+      previousOpenSideRef.current = openSide
+    })
 
     const context = useMemo(
       () => ({
@@ -455,6 +585,53 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
           data-swipe-actions-root=""
           data-state={openSide === null ? 'closed' : 'open'}
           data-disabled={disabled ? '' : undefined}
+          tabIndex={
+            rootProps.tabIndex ?? (hasActions && !disabled ? 0 : undefined)
+          }
+          onKeyDown={(event) => {
+            rootProps.onKeyDown?.(event)
+            if (
+              event.defaultPrevented ||
+              disabledRef.current ||
+              event.altKey ||
+              event.ctrlKey ||
+              event.metaKey ||
+              event.shiftKey ||
+              isEditableTarget(event.target)
+            ) {
+              return
+            }
+
+            if (event.key === 'Escape') {
+              if (openSideRef.current !== null) {
+                event.preventDefault()
+                requestOpenSideRef.current(null)
+              }
+              return
+            }
+
+            const side = sideFromArrowKey(event.key, directionRef.current)
+            if (
+              side === null ||
+              actionRegistrationsRef.current[side].size === 0
+            ) {
+              return
+            }
+
+            event.preventDefault()
+            if (openSideRef.current === side) {
+              const container = firstValue(
+                sideRegistrationsRef.current[side],
+              )?.element
+              if (container !== undefined) {
+                focusFirstEnabled(container)
+              }
+              return
+            }
+
+            pendingKeyboardFocusRef.current = side
+            requestOpenSideRef.current(side)
+          }}
           onClickCapture={(event) => {
             const suppressed = gestureRef.current?.onClickCapture(event)
             if (!suppressed) {
@@ -508,6 +685,8 @@ function createRootMotionAdapter(
   let offset = 0
   let armedSide: SwipeActionsSide | null = null
   let armedAction: HTMLButtonElement | null = null
+  let reducedMotion = false
+  let activeSettle: ActiveSettle | null = null
 
   const clearArmedAction = () => {
     if (armedAction === null) {
@@ -613,12 +792,40 @@ function createRootMotionAdapter(
   return {
     readOffset,
     writeOffset,
-    settle: (target, velocity) => animator.animateTo(target, { velocity }),
+    settle(target, velocity) {
+      return new Promise<AnimationResult>((resolve) => {
+        const settle: ActiveSettle = {
+          target,
+          settled: false,
+          resolve,
+        }
+        activeSettle = settle
+        void animator
+          .animateTo(target, { velocity, reducedMotion })
+          .then((result) => finishSettle(settle, result))
+      })
+    },
     cancel() {
       const wasAnimating = animator.isAnimating()
       animator.cancel()
       offset = readOffset()
       return wasAnimating
+    },
+    setReducedMotion(nextReducedMotion) {
+      reducedMotion = nextReducedMotion
+      const settle = activeSettle
+      if (
+        !nextReducedMotion ||
+        settle === null ||
+        settle.settled ||
+        !animator.isAnimating()
+      ) {
+        return
+      }
+
+      animator.cancel()
+      writeOffset(settle.target)
+      finishSettle(settle, { status: 'completed' })
     },
     measurements,
     direction: () => directionRef.current,
@@ -631,6 +838,35 @@ function createRootMotionAdapter(
       }
     },
   }
+
+  function finishSettle(settle: ActiveSettle, result: AnimationResult) {
+    if (settle.settled) {
+      return
+    }
+
+    settle.settled = true
+    if (activeSettle === settle) {
+      activeSettle = null
+    }
+    settle.resolve(result)
+  }
+}
+
+interface ActiveSettle {
+  target: number
+  settled: boolean
+  resolve(result: AnimationResult): void
+}
+
+function readComputedDirection(
+  element: HTMLElement,
+  view: Window | null,
+): SwipeActionsDirection {
+  if (view === null || typeof view.getComputedStyle !== 'function') {
+    return 'ltr'
+  }
+
+  return view.getComputedStyle(element).direction === 'rtl' ? 'rtl' : 'ltr'
 }
 
 function firstContentElement(root: HTMLDivElement | null) {

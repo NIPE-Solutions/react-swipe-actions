@@ -25,7 +25,12 @@ function createSide(side: SwipeActionsSide) {
         [updateSideWidth],
       )
 
-      useLayoutEffect(() => registerSide?.(side, idRef.current), [registerSide])
+      useLayoutEffect(() => {
+        const element = elementRef.current
+        if (element !== null) {
+          return registerSide?.(side, idRef.current, element)
+        }
+      }, [elementRef, registerSide])
       useElementMeasurement(elementRef, reportWidth)
 
       return (

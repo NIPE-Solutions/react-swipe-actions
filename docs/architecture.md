@@ -112,6 +112,12 @@ velocity path requires directional pointer displacement of at least 15% of the
 content width. A pre-existing open offset is not counted as pointer travel, so a
 tiny extension from an open row cannot activate a destructive action.
 
+Arming uses a small internal hysteresis band: the claimant arms at the configured
+threshold and, once armed, disarms three percentage points below it (never below
+the normal open threshold). Release resolution uses the same band, so the visual
+armed state and committed activation cannot disagree near the boundary. This is
+an interaction default rather than a public tuning prop.
+
 ## Resistance and full swipe
 
 Without a full-swipe claimant, unrestricted travel ends at the measured side

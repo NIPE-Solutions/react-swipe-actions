@@ -282,6 +282,40 @@ describe('SwipeActions full swipe', () => {
     expect(row.root.isConnected).toBe(true)
   })
 
+  it('keeps an armed full swipe stable inside a small threshold hysteresis band', async () => {
+    // Catches exact-threshold chatter and release disagreeing with the visible armed state.
+    const row = await renderRow()
+
+    dispatchPointer(row.content, 'pointerdown', { clientX: 0, timeStamp: 0 })
+    dispatchPointer(row.content, 'pointermove', { clientX: 225, timeStamp: 20 })
+    frames.advance(16)
+    expect(row.leadingAction).toHaveAttribute('data-active', '')
+
+    dispatchPointer(row.content, 'pointermove', { clientX: 217, timeStamp: 120 })
+    frames.advance(16)
+    expect(row.leadingAction).toHaveAttribute('data-active', '')
+
+    dispatchPointer(row.content, 'pointerup', { clientX: 217, timeStamp: 220 })
+    expect(row.invokeLeading).toHaveBeenCalledOnce()
+  })
+
+  it('disarms after reversing below the full-swipe hysteresis band', async () => {
+    // Catches hysteresis becoming sticky after a deliberate reversal.
+    const row = await renderRow()
+
+    dispatchPointer(row.content, 'pointerdown', { clientX: 0, timeStamp: 0 })
+    dispatchPointer(row.content, 'pointermove', { clientX: 225, timeStamp: 20 })
+    frames.advance(16)
+    expect(row.leadingAction).toHaveAttribute('data-active', '')
+
+    dispatchPointer(row.content, 'pointermove', { clientX: 210, timeStamp: 120 })
+    frames.advance(16)
+    expect(row.leadingAction).not.toHaveAttribute('data-active')
+
+    dispatchPointer(row.content, 'pointerup', { clientX: 210, timeStamp: 220 })
+    expect(row.invokeLeading).not.toHaveBeenCalled()
+  })
+
   it.each([
     { offset: 47, activates: false },
     { offset: 49, activates: true },

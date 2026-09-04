@@ -69,6 +69,32 @@ test('a full trailing swipe invokes its action exactly once and closes', async (
   expect(errors).toEqual([])
 })
 
+test('full-swipe arming stays stable inside its hysteresis band', async ({
+  page,
+}) => {
+  // Catches browser-frame updates chattering around the arm threshold.
+  await gotoFixture(page, 'inbox')
+  const root = page.getByTestId('row-1')
+  const surface = page.getByTestId('row-1-drag-surface')
+  const action = page.getByTestId('row-1-trailing-1')
+  const start = await pointFor(surface)
+  const box = await root.boundingBox()
+  expect(box).not.toBeNull()
+
+  await page.mouse.move(start.x, start.y)
+  await page.mouse.down()
+  await page.mouse.move(start.x - box!.width * 0.71, start.y, { steps: 8 })
+  await expect(action).toHaveAttribute('data-active', '')
+
+  await page.mouse.move(start.x - box!.width * 0.68, start.y, { steps: 3 })
+  await expect(action).toHaveAttribute('data-active', '')
+  await page.waitForTimeout(120)
+  await page.mouse.up()
+
+  await expect(page.getByTestId('delete-count')).toHaveText('1')
+  await expectClosed(root)
+})
+
 test('body scrolling over a row does not translate its content', async ({
   page,
 }) => {

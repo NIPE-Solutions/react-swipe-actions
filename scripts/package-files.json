@@ -1,5 +1,7 @@
 [
+  "CHANGELOG.md",
   "LICENSE",
+  "README.md",
   "dist/components/action.d.ts",
   "dist/components/content.d.ts",
   "dist/components/context.d.ts",

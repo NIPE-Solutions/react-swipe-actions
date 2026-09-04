@@ -199,26 +199,35 @@ describe('SwipeActions runtime direction', () => {
 
   it('uses one attribute-only observer for the Root ancestry and disconnects it', async () => {
     // Catches per-ancestor observers, unrelated subtree observation, or a leaked observer.
-    const observe = vi.fn()
-    const disconnect = vi.fn()
-    const observerConstructed = vi.fn()
+    const instances: Array<{
+      observe: ReturnType<typeof vi.fn>
+      disconnect: ReturnType<typeof vi.fn>
+    }> = []
     class TrackingMutationObserver {
+      observe = vi.fn()
+      disconnect = vi.fn()
+
       constructor(callback: MutationCallback) {
         void callback
-        observerConstructed()
+        instances.push(this)
       }
 
-      observe = observe
-      disconnect = disconnect
       takeRecords = () => []
     }
     vi.stubGlobal('MutationObserver', TrackingMutationObserver)
     const rendered = await renderComputedRow()
     const root = rendered.getByTestId('root')
+    const directionObservers = instances.filter(({ observe }) =>
+      observe.mock.calls.some(
+        ([, options]) =>
+          (options as MutationObserverInit).attributeFilter?.[0] === 'dir',
+      ),
+    )
 
-    expect(observerConstructed).toHaveBeenCalledOnce()
-    expect(observe).toHaveBeenCalled()
-    for (const [target, options] of observe.mock.calls) {
+    expect(directionObservers).toHaveLength(1)
+    const directionObserver = directionObservers[0]!
+    expect(directionObserver.observe).toHaveBeenCalled()
+    for (const [target, options] of directionObserver.observe.mock.calls) {
       expect((target as Element).contains(root)).toBe(true)
       expect(options).toEqual({
         attributes: true,
@@ -228,6 +237,8 @@ describe('SwipeActions runtime direction', () => {
 
     rendered.unmount()
 
-    expect(disconnect).toHaveBeenCalledOnce()
+    for (const { disconnect } of instances) {
+      expect(disconnect).toHaveBeenCalledOnce()
+    }
   })
 })

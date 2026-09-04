@@ -97,4 +97,31 @@ describe('setSubtreeInert', () => {
     expect(explicit).toHaveAttribute('tabindex', '2')
     expect(alreadyHidden).toHaveAttribute('tabindex', '-1')
   })
+
+  it('restores consumer tabindex changes made while the subtree is inert', async () => {
+    // Catches the forced -1 masking newer implicit-to--1 and explicit-value updates.
+    document.body.innerHTML = `
+      <section id="actions">
+        <button id="implicit">Implicit</button>
+        <a id="explicit" href="#destination" tabindex="2">Explicit</a>
+      </section>
+    `
+    const container = document.querySelector<HTMLElement>('#actions')!
+    const implicit = document.querySelector<HTMLElement>('#implicit')!
+    const explicit = document.querySelector<HTMLElement>('#explicit')!
+    setSubtreeInert(container, true)
+
+    implicit.setAttribute('tabindex', '-1')
+    explicit.setAttribute('tabindex', '3')
+    await Promise.resolve()
+
+    expect(implicit).toHaveAttribute('tabindex', '-1')
+    expect(explicit).toHaveAttribute('tabindex', '-1')
+    setSubtreeInert(container, false)
+
+    expect(implicit).toHaveAttribute('tabindex', '-1')
+    expect(explicit).toHaveAttribute('tabindex', '3')
+    expect(focusFirstEnabled(container)).toBe(true)
+    expect(document.activeElement).toBe(explicit)
+  })
 })

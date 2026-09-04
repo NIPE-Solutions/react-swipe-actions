@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { sections } from '../content'
+import { navigationGroups, siteLinks, siteMetadata } from '../content'
 
 export function DocsShell({ children }: { children: ReactNode }) {
   return (
@@ -25,15 +25,27 @@ export function DocsShell({ children }: { children: ReactNode }) {
           </span>
         </a>
         <nav aria-label="Documentation sections">
-          <ol>
-            {sections.map(([id, label]) => (
-              <li key={id}>
-                <a href={`#${id}`}>{label}</a>
-              </li>
-            ))}
-          </ol>
+          {navigationGroups.map(({ label, entries }) => (
+            <div className="rail-group" key={label}>
+              <p className="rail-group__label">{label}</p>
+              <ol>
+                {entries.map(([id, entryLabel]) => (
+                  <li key={id}>
+                    <a href={`#${id}`}>{entryLabel}</a>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
         </nav>
-        <p className="rail-note">Alpha 0.1 · React 18.3 and 19</p>
+        <nav className="rail-utilities" aria-label="Project links">
+          <a href={siteLinks.github}>GitHub</a>
+          <a href={siteLinks.changelog}>Changelog</a>
+          <a href={siteLinks.nipeOpenSource}>NIPE Open Source</a>
+        </nav>
+        <p className="rail-note">
+          {siteMetadata.statusLabel} · {siteMetadata.reactCompatibility}
+        </p>
       </aside>
       <main>{children}</main>
     </div>

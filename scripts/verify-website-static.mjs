@@ -6,7 +6,9 @@ import ts from 'typescript'
 import {
   canonicalCode,
   completeCanonicalCode,
+  navigationGroups,
   sections,
+  siteMetadata,
 } from '../website/src/content.ts'
 
 const repositoryRoot = path.resolve(import.meta.dirname, '..')
@@ -68,6 +70,7 @@ const prohibitedPhrases = [
 
 await verifySourceBoundaries()
 await verifyDocumentInventory()
+await verifyIdentityAndMetadata()
 await verifyProductionBuild()
 verifyCanonicalSource(canonicalCode, 'Compact canonical excerpt', {
   complete: false,
@@ -141,6 +144,24 @@ async function verifyDocumentInventory() {
     'Documentation sections differ from the approved inventory',
   )
 
+  assert.deepEqual(
+    navigationGroups.map(({ label }) => label),
+    [
+      'Start',
+      'Core concepts',
+      'Interaction',
+      'Customization',
+      'Advanced',
+      'Resources',
+    ],
+    'Documentation navigation uses the approved groups',
+  )
+  assert.deepEqual(
+    navigationGroups.flatMap(({ entries }) => entries.map(([id]) => id)),
+    approvedSections,
+    'Grouped navigation preserves the approved section order',
+  )
+
   const sourceFiles = await collectFiles(sourceRoot, (file) =>
     /\.(ts|tsx)$/.test(file),
   )
@@ -164,6 +185,66 @@ async function verifyDocumentInventory() {
     [],
     'Website source contains prohibited marketing language',
   )
+}
+
+async function verifyIdentityAndMetadata() {
+  const packageJson = JSON.parse(
+    await readFile(path.join(repositoryRoot, 'package.json'), 'utf8'),
+  )
+  assert.equal(siteMetadata.version, packageJson.version)
+  assert.equal(siteMetadata.statusLabel, '0.1 alpha')
+  assert.equal(siteMetadata.reactCompatibility, 'React 18.3 and 19')
+
+  const mainSource = await readFile(path.join(sourceRoot, 'main.tsx'), 'utf8')
+  const shellSource = await readFile(
+    path.join(sourceRoot, 'components', 'DocsShell.tsx'),
+    'utf8',
+  )
+  const contentSource = await readFile(
+    path.join(sourceRoot, 'content.ts'),
+    'utf8',
+  )
+  const source = `${mainSource}\n${shellSource}\n${contentSource}`
+  assert.match(
+    source,
+    /Swipe actions that feel native\. State that stays yours\./,
+    'Hero describes native feel without claiming a native primitive',
+  )
+  for (const destination of [
+    'https://github.com/NIPE-Solutions/react-swipe-actions',
+    'https://opensource.nipesolutions.com',
+    'https://opensource.nipesolutions.com/impressum',
+    'https://opensource.nipesolutions.com/privacy',
+  ]) {
+    assert.ok(source.includes(destination), `Website links to ${destination}`)
+  }
+
+  const index = await readFile(path.join(websiteRoot, 'index.html'), 'utf8')
+  for (const pattern of [
+    /<link[\s\S]*?rel="canonical"[\s\S]*?href="https:\/\/react-swipe-actions\.nipesolutions\.com\/"/,
+    /<meta property="og:title"/,
+    /<meta[\s\S]*?property="og:description"/,
+    /<meta[\s\S]*?property="og:image"[\s\S]*?content="https:\/\/react-swipe-actions\.nipesolutions\.com\/og-react-swipe-actions\.png"/,
+    /<meta name="twitter:card" content="summary_large_image"/,
+    /<meta name="theme-color"/,
+    /<link rel="icon"/,
+  ]) {
+    assert.match(index, pattern)
+  }
+
+  for (const asset of [
+    'public/og-react-swipe-actions.svg',
+    'public/og-react-swipe-actions.png',
+    'public/favicon.svg',
+    'public/robots.txt',
+    'public/sitemap.xml',
+  ]) {
+    assert.equal(
+      await fileExists(path.join(websiteRoot, asset)),
+      true,
+      `Website includes ${asset}`,
+    )
+  }
 }
 
 async function verifyProductionBuild() {
@@ -225,6 +306,15 @@ async function collectFiles(root, predicate) {
     }
   }
   return files.sort()
+}
+
+async function fileExists(file) {
+  try {
+    await stat(file)
+    return true
+  } catch {
+    return false
+  }
 }
 
 function escapeRegExp(value) {

@@ -14,6 +14,8 @@ import {
   groupCode,
   installCommand,
   packageName,
+  siteLinks,
+  siteMetadata,
   ssrCode,
 } from './content'
 import { ContainerExamples } from './examples/ContainerExamples'
@@ -56,10 +58,13 @@ function Website() {
             data-testid="hero-description"
           >
             <p className="status-line">
-              <span />
-              Composable swipe actions for React
+              <span className="status-line__dot" />
+              <span className="status-line__copy">
+                Composable swipe actions for React
+              </span>
+              <small>{siteMetadata.statusLabel}</small>
             </p>
-            <h1>Native swipe. State that stays yours.</h1>
+            <h1>Swipe actions that feel native. State that stays yours.</h1>
             <p className="intro__lede">
               Accessible reveal, full swipe, grouping, keyboard control, and RTL
               in a small compound-component API.
@@ -200,10 +205,10 @@ function Website() {
         intro="Mark one enabled action on a side as the full-swipe claimant."
       >
         <p>
-          Crossing the full-swipe threshold arms that action. Returning below
-          the threshold disarms it. The application still decides whether an
-          invoked action removes a row, shows undo, or waits for a server
-          response.
+          Crossing the full-swipe threshold arms that action. A small internal
+          hysteresis band keeps the state stable near that boundary; deliberate
+          reversal disarms it. The application still decides whether an invoked
+          action removes a row, shows undo, or waits for a server response.
         </p>
         <CodeBlock
           label="Destructive trailing action"
@@ -601,17 +606,36 @@ function Website() {
           interaction coverage runs through <code>npm run test:e2e</code>.
           Document manual device results separately.
         </p>
-        <a
-          className="text-link"
-          href="https://github.com/nipe-solutions/react-swipe-actions"
-        >
+        <a className="text-link" href={siteLinks.github}>
           Repository and issue tracker
         </a>
       </DocSection>
 
       <footer className="site-footer">
-        <strong>React Swipe Actions</strong>
-        <span>MIT licensed · API status: alpha</span>
+        <div className="site-footer__identity">
+          <strong>React Swipe Actions</strong>
+          <span>
+            Composable swipe actions for React · {siteMetadata.statusLabel}
+          </span>
+        </div>
+        <nav className="site-footer__links" aria-label="Footer">
+          <div>
+            <h2>Project</h2>
+            <a href={siteLinks.github}>GitHub</a>
+            <a href={siteLinks.changelog}>Changelog</a>
+            <a href={siteLinks.security}>Security</a>
+            <a href={siteLinks.license}>MIT License</a>
+          </div>
+          <div>
+            <h2>NIPE</h2>
+            <a href={siteLinks.nipeOpenSource}>NIPE Open Source</a>
+          </div>
+          <div>
+            <h2>Legal</h2>
+            <a href={siteLinks.imprint}>Imprint</a>
+            <a href={siteLinks.privacy}>Privacy</a>
+          </div>
+        </nav>
       </footer>
     </DocsShell>
   )

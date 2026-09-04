@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">React Swipe Actions</title>
+  <desc id="description">Composable swipe actions for React, illustrated by a row revealing Archive and Delete actions.</desc>
+  <rect width="1200" height="630" fill="#f8fafc"/>
+  <path d="M0 1h1200M0 629h1200" stroke="#cdd7e3"/>
+  <g transform="translate(82 76)">
+    <rect width="46" height="46" rx="10" fill="#10213d"/>
+    <rect x="4" y="14" width="9" height="18" rx="3" fill="#1f63d6"/>
+    <rect x="33" y="14" width="9" height="18" rx="3" fill="#147565"/>
+    <rect x="11" y="11" width="24" height="24" rx="5" fill="#fff"/>
+    <text x="64" y="29" fill="#10213d" font-family="Arial, Helvetica, sans-serif" font-size="18">NIPE Open Source</text>
+  </g>
+  <text x="82" y="228" fill="#10213d" font-family="Arial, Helvetica, sans-serif" font-size="78" font-weight="700" letter-spacing="-3">React Swipe Actions</text>
+  <text x="82" y="292" fill="#34445f" font-family="Arial, Helvetica, sans-serif" font-size="29">Swipe actions that feel native. State that stays yours.</text>
+  <g transform="translate(82 390)">
+    <rect width="1036" height="132" rx="18" fill="#d7e0eb" stroke="#aebdce"/>
+    <rect width="182" height="132" rx="18" fill="#147565"/>
+    <text x="58" y="76" fill="#fff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">Archive</text>
+    <rect x="854" width="182" height="132" rx="18" fill="#b42318"/>
+    <text x="945" y="76" fill="#fff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700">Delete</text>
+    <rect x="118" width="780" height="132" rx="18" fill="#fff" stroke="#cdd7e3"/>
+    <circle cx="174" cy="66" r="25" fill="#dfe9f4" stroke="#bbc8d8"/>
+    <text x="174" y="73" fill="#244260" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700">MC</text>
+    <text x="218" y="55" fill="#10213d" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">Review notes are ready</text>
+    <text x="218" y="86" fill="#6a7688" font-family="Arial, Helvetica, sans-serif" font-size="17">Arbitrary React content stays in the foreground.</text>
+  </g>
+</svg>

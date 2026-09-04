@@ -1,31 +1,97 @@
+import packageMetadata from '../../package.json' with { type: 'json' }
+
 export const packageName = '@nipe-solutions/react-swipe-actions'
 
-export const sections = [
-  ['introduction', 'Introduction'],
-  ['installation', 'Installation'],
-  ['quick-start', 'Quick start'],
-  ['anatomy', 'Anatomy'],
-  ['actions', 'Actions'],
-  ['leading-trailing', 'Leading and trailing'],
-  ['full-swipe', 'Full swipe'],
-  ['controlled-state', 'Controlled state'],
-  ['groups', 'Groups'],
-  ['gestures', 'Gestures'],
-  ['scroll-interaction', 'Scroll interaction'],
-  ['accessibility', 'Accessibility'],
-  ['keyboard', 'Keyboard'],
-  ['rtl', 'RTL'],
-  ['styling', 'Styling'],
-  ['css-variables', 'CSS variables'],
-  ['data-attributes', 'Data attributes'],
-  ['performance', 'Performance'],
-  ['ssr', 'SSR'],
-  ['api-reference', 'API reference'],
-  ['examples', 'Examples'],
-  ['faq', 'FAQ'],
-  ['migration', 'Migration'],
-  ['contributing', 'Contributing'],
+export const navigationGroups = [
+  {
+    label: 'Start',
+    entries: [
+      ['introduction', 'Introduction'],
+      ['installation', 'Installation'],
+      ['quick-start', 'Quick start'],
+      ['anatomy', 'Anatomy'],
+    ],
+  },
+  {
+    label: 'Core concepts',
+    entries: [
+      ['actions', 'Actions'],
+      ['leading-trailing', 'Leading and trailing'],
+      ['full-swipe', 'Full swipe'],
+      ['controlled-state', 'Controlled state'],
+      ['groups', 'Groups'],
+    ],
+  },
+  {
+    label: 'Interaction',
+    entries: [
+      ['gestures', 'Gestures'],
+      ['scroll-interaction', 'Scroll interaction'],
+      ['accessibility', 'Accessibility'],
+      ['keyboard', 'Keyboard'],
+      ['rtl', 'RTL'],
+    ],
+  },
+  {
+    label: 'Customization',
+    entries: [
+      ['styling', 'Styling'],
+      ['css-variables', 'CSS variables'],
+      ['data-attributes', 'Data attributes'],
+    ],
+  },
+  {
+    label: 'Advanced',
+    entries: [
+      ['performance', 'Performance'],
+      ['ssr', 'SSR'],
+      ['api-reference', 'API reference'],
+    ],
+  },
+  {
+    label: 'Resources',
+    entries: [
+      ['examples', 'Examples'],
+      ['faq', 'FAQ'],
+      ['migration', 'Migration'],
+      ['contributing', 'Contributing'],
+    ],
+  },
 ] as const
+
+export const sections = navigationGroups.flatMap(
+  ({ entries }) => entries as readonly (readonly [string, string])[],
+)
+
+const [baseVersion, prerelease = ''] = packageMetadata.version.split('-')
+const [major = '0', minor = '0'] = baseVersion?.split('.') ?? []
+const releaseStatus = prerelease.split('.')[0] || 'stable'
+const reactVersions = [
+  ...packageMetadata.peerDependencies.react.matchAll(/\^(\d+)(?:\.(\d+))?/g),
+].map(([, reactMajor, reactMinor]) =>
+  reactMinor !== undefined && reactMinor !== '0'
+    ? `${reactMajor}.${reactMinor}`
+    : reactMajor,
+)
+
+export const siteMetadata = {
+  version: packageMetadata.version,
+  statusLabel: `${major}.${minor} ${releaseStatus}`,
+  reactCompatibility: `React ${reactVersions.join(' and ')}`,
+} as const
+
+export const siteLinks = {
+  github: 'https://github.com/NIPE-Solutions/react-swipe-actions',
+  changelog:
+    'https://github.com/NIPE-Solutions/react-swipe-actions/blob/main/CHANGELOG.md',
+  security:
+    'https://github.com/NIPE-Solutions/react-swipe-actions/security/policy',
+  license:
+    'https://github.com/NIPE-Solutions/react-swipe-actions/blob/main/LICENSE',
+  nipeOpenSource: 'https://opensource.nipesolutions.com',
+  imprint: 'https://opensource.nipesolutions.com/impressum',
+  privacy: 'https://opensource.nipesolutions.com/privacy',
+} as const
 
 export const installCommand = `npm install ${packageName}`
 

@@ -9,6 +9,7 @@ import {
 } from '@nipe-solutions/react-swipe-actions'
 
 import { GestureVisualizer } from './GestureVisualizer'
+import { ActionIcon } from './ActionIcon'
 
 const messages = [
   {
@@ -80,13 +81,15 @@ export function InboxDemo() {
                     className="swipe-action swipe-action--flag"
                     onAction={() => setStatus(`${message.subject} flagged.`)}
                   >
-                    Flag
+                    <ActionIcon name="flag" />
+                    <span>Flag</span>
                   </Action>
                   <Action
                     className="swipe-action swipe-action--archive"
                     onAction={() => setStatus(`${message.subject} archived.`)}
                   >
-                    Archive
+                    <ActionIcon name="archive" />
+                    <span>Archive</span>
                   </Action>
                 </Leading>
                 <Content className="swipe-row__content">
@@ -117,7 +120,8 @@ export function InboxDemo() {
                     className="swipe-action swipe-action--snooze"
                     onAction={() => setStatus(`${message.subject} snoozed.`)}
                   >
-                    Snooze
+                    <ActionIcon name="snooze" />
+                    <span>Snooze</span>
                   </Action>
                   <Action
                     className="swipe-action swipe-action--delete"
@@ -128,7 +132,8 @@ export function InboxDemo() {
                       setStatus(`${message.subject} delete action invoked.`)
                     }}
                   >
-                    Delete
+                    <ActionIcon name="delete" />
+                    <span>Delete</span>
                   </Action>
                 </Trailing>
               </Root>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://react-swipe-actions.nipesolutions.com/sitemap.xml

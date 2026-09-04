@@ -129,6 +129,36 @@ try {
     'Prohibited marketing phrases were rendered',
   )
 
+  assert.deepEqual(
+    await page.locator('.rail-group__label').allTextContents(),
+    [
+      'Start',
+      'Core concepts',
+      'Interaction',
+      'Customization',
+      'Advanced',
+      'Resources',
+    ],
+    'Documentation navigation renders compact non-link group labels',
+  )
+  assert.equal(
+    await page
+      .locator('.rail-group__label')
+      .evaluateAll((labels) => labels.every((label) => label.tabIndex === -1)),
+    true,
+    'Navigation group labels are not focus targets',
+  )
+  assert.equal(
+    (await page.locator('.status-line small').textContent())?.trim(),
+    '0.1 alpha',
+    'The package prerelease status is visible beside the hero identity',
+  )
+  assert.equal(
+    await page.locator('.site-footer__links a').count(),
+    7,
+    'The OSS footer exposes project, NIPE, and legal destinations',
+  )
+
   await verifyOpeningGeometry(page, { width: 1440, height: 1000 })
 
   await verifyPrimaryDemo(page)
@@ -255,6 +285,29 @@ async function verifySourceBoundaries() {
 async function verifyPrimaryDemo(page) {
   const rows = page.locator('[data-demo-row]')
   assert.ok((await rows.count()) >= 2, 'Primary demo renders a grouped inbox')
+  const actionIcons = page.locator('.inbox-demo .action-icon')
+  assert.equal(
+    await actionIcons.count(),
+    12,
+    'Every inbox action pairs an icon with its label',
+  )
+  assert.equal(
+    await actionIcons.evaluateAll((icons) =>
+      icons.every((icon) => icon.getAttribute('aria-hidden') === 'true'),
+    ),
+    true,
+    'Decorative action icons stay hidden from assistive technology',
+  )
+  const firstRowActionWidths = await rows
+    .first()
+    .locator('[data-swipe-actions-action]')
+    .evaluateAll((actions) =>
+      actions.map((action) => action.getBoundingClientRect().width),
+    )
+  assert.ok(
+    new Set(firstRowActionWidths.map((width) => Math.round(width))).size > 1,
+    'The primary demo shows actions with different measured widths',
+  )
 
   const first = rows.nth(0)
   const second = rows.nth(1)

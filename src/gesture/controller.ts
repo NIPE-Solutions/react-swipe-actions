@@ -1,6 +1,7 @@
 import type {
   SwipeActionsDirection,
   SwipeActionsOpenSide,
+  SwipeActionsSide,
 } from '../public-types'
 import type { MeasurementSnapshot } from '../components/context'
 import type { AnimationResult } from '../motion/animator'
@@ -53,6 +54,7 @@ export interface GestureControllerOptions {
   getFullSwipeThreshold(): number
   requestOpenSide(side: SwipeActionsOpenSide): SwipeActionsOpenSide
   setPhase(phase: GesturePhase): void
+  setArmedSide(side: SwipeActionsSide | null): void
 }
 
 export interface GestureController {
@@ -114,6 +116,22 @@ export function createGestureController(
   const restingPhase = (): GesturePhase =>
     options.getOpenSide() === null ? 'closed' : 'open'
 
+  const armedSideForOffset = (offset: number): SwipeActionsSide | null => {
+    const snapshot = options.motion.measurements()
+    if (snapshot.contentWidth <= 0 || offset === 0) {
+      return null
+    }
+
+    const leadingSign = physicalSign('leading', options.motion.direction())
+    const logicalOffset = offset * leadingSign
+    const side = logicalOffset > 0 ? 'leading' : 'trailing'
+    const threshold = snapshot.contentWidth * options.getFullSwipeThreshold()
+    return snapshot[side].fullSwipeAction !== null &&
+      Math.abs(offset) >= threshold
+      ? side
+      : null
+  }
+
   const removeBlurListener = () => {
     blurWindow?.removeEventListener('blur', onBlur)
     blurWindow = null
@@ -159,6 +177,7 @@ export function createGestureController(
     }
 
     if (restore) {
+      options.setArmedSide(null)
       options.motion.writeOffset(restingOffset())
       options.setPhase(restingPhase())
     }
@@ -169,6 +188,7 @@ export function createGestureController(
     const hadWork = session !== null || dragFrame !== null || motionWasActive
     settleGeneration += 1
     clearSuppression()
+    options.setArmedSide(null)
     abandonSession(
       reason !== 'unmount' && (hadWork || reason === 'configuration'),
     )
@@ -199,6 +219,7 @@ export function createGestureController(
         return
       }
       options.motion.writeOffset(active.pendingOffset)
+      options.setArmedSide(armedSideForOffset(active.pendingOffset))
     })
   }
 
@@ -221,6 +242,7 @@ export function createGestureController(
     active.samples.push({ x: event.clientX, t: event.timeStamp })
     clearDragFrame()
     options.motion.writeOffset(active.pendingOffset)
+    options.setArmedSide(armedSideForOffset(active.pendingOffset))
     session = null
     releaseCapture(active)
     removeBlurListener()
@@ -253,18 +275,40 @@ export function createGestureController(
       openThreshold: options.getOpenThreshold(),
       fullSwipeThreshold: options.getFullSwipeThreshold(),
     })
-
     const generation = ++settleGeneration
     options.setPhase(target.kind === 'activate' ? 'activating' : 'settling')
-    void options.motion.settle(target.offset, velocity).then((result) => {
-      if (result.status !== 'completed' || generation !== settleGeneration) {
-        return
-      }
+    if (target.kind === 'activate' && target.side !== null) {
+      options.setArmedSide(target.side)
+    } else {
+      options.setArmedSide(null)
+    }
 
-      const authoritativeSide = options.requestOpenSide(target.side)
-      options.motion.writeOffset(offsetForSide(authoritativeSide))
-      options.setPhase(authoritativeSide === null ? 'closed' : 'open')
-    })
+    const activation =
+      target.kind === 'activate' && target.side !== null
+        ? snapshot[target.side].fullSwipeAction
+        : null
+    const completion = options.motion
+      .settle(target.offset, velocity)
+      .then((result) => {
+        if (result.status !== 'completed' || generation !== settleGeneration) {
+          return
+        }
+
+        if (target.kind === 'activate') {
+          options.setArmedSide(null)
+          const authoritativeSide = options.getOpenSide()
+          options.motion.writeOffset(offsetForSide(authoritativeSide))
+          options.setPhase(authoritativeSide === null ? 'closed' : 'open')
+          return
+        }
+
+        const authoritativeSide = options.requestOpenSide(target.side)
+        options.motion.writeOffset(offsetForSide(authoritativeSide))
+        options.setPhase(authoritativeSide === null ? 'closed' : 'open')
+      })
+    void completion
+
+    activation?.invoke()
   }
 
   return {
@@ -276,9 +320,13 @@ export function createGestureController(
         return
       }
 
+      if (!event.isPrimary) {
+        cancel('second-pointer')
+        return
+      }
+
       if (
         options.isDisabled() ||
-        !event.isPrimary ||
         event.button !== 0 ||
         (event.pointerType === 'mouse' && isInteractiveTarget(event.target))
       ) {
@@ -289,6 +337,7 @@ export function createGestureController(
       const startOffset = options.motion.readOffset()
       const interruptedSettle = options.motion.cancel()
       settleGeneration += 1
+      options.setArmedSide(null)
       session = {
         pointerId: event.pointerId,
         surface: event.currentTarget,

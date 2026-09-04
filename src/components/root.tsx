@@ -45,6 +45,7 @@ interface RootMotionAdapter {
   cancel(): boolean
   measurements(): MeasurementSnapshot
   direction(): SwipeActionsDirection
+  setArmedSide(side: SwipeActionsSide | null): void
 }
 
 const DEFAULT_OPEN_THRESHOLD = 0.35
@@ -187,6 +188,7 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         setPhase: (phase) => {
           elementRef.current?.setAttribute('data-state', phase)
         },
+        setArmedSide: (side) => motionRef.current?.setArmedSide(side),
       })
     }
 
@@ -504,6 +506,47 @@ function createRootMotionAdapter(
   directionRef: { current: SwipeActionsDirection },
 ): RootMotionAdapter {
   let offset = 0
+  let armedSide: SwipeActionsSide | null = null
+  let armedAction: HTMLButtonElement | null = null
+
+  const clearArmedAction = () => {
+    if (armedAction === null) {
+      return
+    }
+
+    armedAction.removeAttribute('data-active')
+    armedAction.style.removeProperty('--swipe-actions-full-swipe-width')
+    armedAction.style.removeProperty('--swipe-actions-full-swipe-progress')
+    armedAction = null
+  }
+
+  const writeArmedAction = () => {
+    const snapshot = measurements()
+    const nextAction =
+      armedSide === null ? null : snapshot[armedSide].fullSwipeAction?.element
+
+    if (nextAction !== armedAction) {
+      clearArmedAction()
+      armedAction = nextAction ?? null
+    }
+
+    if (armedAction === null) {
+      return
+    }
+
+    const width = Math.min(snapshot.contentWidth, Math.abs(offset))
+    const progress =
+      snapshot.contentWidth > 0 ? width / snapshot.contentWidth : 0
+    armedAction.setAttribute('data-active', '')
+    armedAction.style.setProperty(
+      '--swipe-actions-full-swipe-width',
+      `${width}px`,
+    )
+    armedAction.style.setProperty(
+      '--swipe-actions-full-swipe-progress',
+      String(progress),
+    )
+  }
 
   const readOffset = () => {
     const content = firstContentElement(elementRef.current)
@@ -564,6 +607,7 @@ function createRootMotionAdapter(
     if (content !== null) {
       content.style.transform = `translate3d(${offset}px, 0, 0)`
     }
+    writeArmedAction()
   }
 
   return {
@@ -578,6 +622,14 @@ function createRootMotionAdapter(
     },
     measurements,
     direction: () => directionRef.current,
+    setArmedSide(side) {
+      armedSide = side
+      if (side === null) {
+        clearArmedAction()
+      } else {
+        writeArmedAction()
+      }
+    },
   }
 }
 

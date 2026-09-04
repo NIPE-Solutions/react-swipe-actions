@@ -2,7 +2,7 @@ import { act, render } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Content, Leading, Root, Trailing } from '../../src'
+import { Action, Content, Leading, Root, Trailing } from '../../src'
 import { resizeObserverMock } from '../setup'
 
 function dispatchPointer(
@@ -10,13 +10,15 @@ function dispatchPointer(
   type: string,
   x: number,
   timeStamp: number,
+  pointerId = 1,
+  isPrimary = true,
 ) {
   const EventConstructor = target.ownerDocument.defaultView?.Event ?? Event
   const event = new EventConstructor(type, { bubbles: true, cancelable: true })
   Object.defineProperties(event, {
-    pointerId: { value: 1 },
+    pointerId: { value: pointerId },
     pointerType: { value: 'touch' },
-    isPrimary: { value: true },
+    isPrimary: { value: isPrimary },
     button: { value: 0 },
     clientX: { value: x },
     clientY: { value: 0 },
@@ -103,6 +105,46 @@ function measure(container: HTMLElement) {
       96,
     )
   })
+}
+
+function activationRow(
+  onAction: () => unknown,
+  onChange = vi.fn(),
+  openSide?: 'leading' | 'trailing' | null,
+  includeClaimant = true,
+) {
+  return (
+    <Root
+      {...(openSide === undefined ? {} : { openSide })}
+      onOpenSideChange={onChange}
+      data-testid="root"
+    >
+      <Leading data-testid="leading">
+        {includeClaimant ? (
+          <Action data-testid="claimant" fullSwipe onAction={onAction}>
+            Archive
+          </Action>
+        ) : null}
+      </Leading>
+      <Content data-testid="content">Message</Content>
+      <Trailing data-testid="trailing" />
+    </Root>
+  )
+}
+
+async function prepareActivationRow(container: HTMLElement) {
+  measure(container)
+  const claimant = container.querySelector('[data-testid="claimant"]')
+  if (claimant !== null) {
+    act(() => resizeObserverMock.emit(claimant, 80))
+  }
+  await act(() => Promise.resolve())
+}
+
+function startActivation(content: Element) {
+  dispatchPointer(content, 'pointerdown', 0, 1)
+  dispatchPointer(content, 'pointermove', 227.2, 10)
+  dispatchPointer(content, 'pointerup', 227.2, 200)
 }
 
 describe('SwipeActions gesture lifecycle', () => {
@@ -437,5 +479,97 @@ describe('SwipeActions gesture lifecycle', () => {
     expect(cancelFrame).toHaveBeenCalledExactlyOnceWith(41)
     rendered.unmount()
     frame.remove()
+  })
+
+  it('invalidates activation completion when the root unmounts', async () => {
+    // Catches an animation generation invoking an action again after teardown.
+    const onAction = vi.fn()
+    const rendered = render(activationRow(onAction))
+    await prepareActivationRow(rendered.container)
+    const content = rendered.getByTestId('content')
+    patchCapture(content)
+
+    startActivation(content)
+    const staleFrame = frames.first()
+    expect(onAction).toHaveBeenCalledOnce()
+
+    rendered.unmount()
+    staleFrame(400)
+    await act(() => Promise.resolve())
+
+    expect(onAction).toHaveBeenCalledOnce()
+    expect(frames.pending()).toBe(0)
+  })
+
+  it('invalidates activation completion when controlled state changes', async () => {
+    // Catches a stale activation overriding the newer controlled side or reinvoking its claimant.
+    const onAction = vi.fn()
+    const onChange = vi.fn()
+    const rendered = render(activationRow(onAction, onChange, null))
+    await prepareActivationRow(rendered.container)
+    const content = rendered.getByTestId('content')
+    patchCapture(content)
+
+    startActivation(content)
+    const staleFrame = frames.first()
+    expect(onAction).toHaveBeenCalledOnce()
+
+    rendered.rerender(activationRow(onAction, onChange, 'trailing'))
+    await act(() => Promise.resolve())
+    staleFrame(400)
+    await act(() => Promise.resolve())
+
+    expect(onAction).toHaveBeenCalledOnce()
+    expect(onChange).not.toHaveBeenCalled()
+    expect(rendered.getByTestId('root')).toHaveStyle({
+      '--swipe-actions-offset': '-96px',
+    })
+  })
+
+  it('invalidates activation completion when its claimant is removed', async () => {
+    // Catches a detached claimant remaining owned by an in-flight generation.
+    const onAction = vi.fn()
+    const rendered = render(activationRow(onAction))
+    await prepareActivationRow(rendered.container)
+    const content = rendered.getByTestId('content')
+    patchCapture(content)
+
+    startActivation(content)
+    const staleFrame = frames.first()
+    expect(onAction).toHaveBeenCalledOnce()
+
+    rendered.rerender(activationRow(onAction, vi.fn(), undefined, false))
+    await act(() => Promise.resolve())
+    staleFrame(400)
+    await act(() => Promise.resolve())
+
+    expect(onAction).toHaveBeenCalledOnce()
+    expect(rendered.queryByTestId('claimant')).not.toBeInTheDocument()
+    expect(rendered.getByTestId('root')).toHaveStyle({
+      '--swipe-actions-offset': '0px',
+    })
+  })
+
+  it('invalidates activation completion when a new pointer starts', async () => {
+    // Catches a prior generation surviving interruption by a secondary pointer.
+    const onAction = vi.fn()
+    const rendered = render(activationRow(onAction))
+    await prepareActivationRow(rendered.container)
+    const content = rendered.getByTestId('content')
+    patchCapture(content)
+
+    startActivation(content)
+    const staleFrame = frames.first()
+    expect(onAction).toHaveBeenCalledOnce()
+
+    dispatchPointer(content, 'pointerdown', 227.2, 210, 2, false)
+    dispatchPointer(content, 'pointercancel', 227.2, 220, 2, false)
+    staleFrame(400)
+    await act(() => Promise.resolve())
+
+    expect(onAction).toHaveBeenCalledOnce()
+    expect(rendered.getByTestId('root')).toHaveStyle({
+      '--swipe-actions-offset': '0px',
+    })
   })
 })

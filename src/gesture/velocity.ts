@@ -67,8 +67,14 @@ export function estimateVelocity(
     return 0
   }
 
+  const lastSample = coalesced.at(-1)
+  if (!lastSample) {
+    return 0
+  }
+
+  const remainingWindowRatio = (windowMs - (now - lastSample.t)) / windowMs
   return clamp(
-    weightedVelocity / totalWeight,
+    (weightedVelocity / totalWeight) * remainingWindowRatio,
     -MAX_RELEASE_VELOCITY,
     MAX_RELEASE_VELOCITY,
   )

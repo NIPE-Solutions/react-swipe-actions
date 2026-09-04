@@ -45,6 +45,20 @@ describe('recent-sample release velocity', () => {
     ).toBe(0)
   })
 
+  it('linearly decays velocity during a pause that remains inside the window', () => {
+    // Catches using now only to discard samples, preserving a stopped drag's speed.
+    expect(
+      estimateVelocity(
+        [
+          { x: 0, t: 99 },
+          { x: 1, t: 100 },
+        ],
+        199,
+        100,
+      ),
+    ).toBeCloseTo(0.01)
+  })
+
   it('favors recent reversed segments over earlier movement', () => {
     // Catches averaging only the session start and end positions.
     expect(

@@ -1,8 +1,4 @@
-import type {
-  SwipeActionsDirection,
-  SwipeActionsOpenSide,
-  SwipeActionsSide,
-} from '../public-types'
+import type { SwipeActionsDirection, SwipeActionsSide } from '../public-types'
 import { physicalSign, sideFromOffset } from '../state/direction'
 import { MAX_RELEASE_VELOCITY } from './velocity'
 
@@ -15,7 +11,6 @@ export interface ReleaseInput {
   rowWidth: number
   widths: Partial<Record<SwipeActionsSide, number>>
   fullSwipeSides?: Partial<Record<SwipeActionsSide, boolean>>
-  openSide?: SwipeActionsOpenSide
   deadZone?: number
   openThreshold?: number
   fullSwipeThreshold?: number
@@ -98,14 +93,12 @@ export function resolveRelease(input: ReleaseInput): ReleaseTarget {
   const fullSwipeDistance = rowWidth * fullSwipeThreshold
   const hasFullSwipe = input.fullSwipeSides?.[side] === true
 
-  const canActivateFromVelocity =
-    normalizedVelocity > 0 &&
-    travel >= rowWidth * FULL_SWIPE_MINIMUM_TRAVEL_RATIO &&
-    projectedTravel >= fullSwipeDistance
-  if (
-    hasFullSwipe &&
-    (travel >= fullSwipeDistance || canActivateFromVelocity)
-  ) {
+  const fullSwipeIsProjected = projectedTravel >= fullSwipeDistance
+  const meetsFullSwipeTravel =
+    travel >= fullSwipeDistance ||
+    (normalizedVelocity > 0 &&
+      travel >= rowWidth * FULL_SWIPE_MINIMUM_TRAVEL_RATIO)
+  if (hasFullSwipe && fullSwipeIsProjected && meetsFullSwipeTravel) {
     return { kind: 'activate', side, offset: sign * rowWidth }
   }
 

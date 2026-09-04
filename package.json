@@ -7,6 +7,10 @@
     "type": "git",
     "url": "git+https://github.com/nipe-solutions/react-swipe-actions.git"
   },
+  "homepage": "https://github.com/nipe-solutions/react-swipe-actions#readme",
+  "bugs": {
+    "url": "https://github.com/nipe-solutions/react-swipe-actions/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=24 <25"

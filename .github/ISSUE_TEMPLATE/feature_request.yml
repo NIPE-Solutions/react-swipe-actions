@@ -1,0 +1,41 @@
+name: Feature request
+description: Propose a focused improvement to the public package contract.
+title: '[feature]: '
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and users affected
+      description: Describe the current limitation with a concrete workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed public API or behavior
+      description: Include a small usage example and explain controlled state, RTL, SSR, and CSS implications when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include application-level patterns or existing package APIs that were considered.
+    validations:
+      required: true
+  - type: textarea
+    id: interaction_accessibility
+    attributes:
+      label: Gesture, browser, and accessibility impact
+      description: Describe expected pointer/scroll behavior, keyboard and focus behavior, assistive-technology concerns, RTL, and browser/device evidence needed to validate the proposal.
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This request does not assume the package will own my application data, mutations, undo, or virtualization.
+          required: true

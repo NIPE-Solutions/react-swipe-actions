@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import console from 'node:console'
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import {
+  access,
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
@@ -23,6 +31,20 @@ const expectedRuntimeExports = [
   'SwipeActions',
   'Trailing',
 ]
+const sourceMode = process.argv.includes('--source')
+const repositoryUrl = 'https://github.com/nipe-solutions/react-swipe-actions'
+const documentationFiles = [
+  'README.md',
+  'CHANGELOG.md',
+  'CONTRIBUTING.md',
+  'CODE_OF_CONDUCT.md',
+  'SECURITY.md',
+  'docs/RELEASING.md',
+  '.github/ISSUE_TEMPLATE/bug_report.yml',
+  '.github/ISSUE_TEMPLATE/feature_request.yml',
+  '.github/PULL_REQUEST_TEMPLATE.md',
+]
+const sourceDocumentation = await validateSourceDocumentation()
 const lanes = [
   {
     label: 'React 18.3.1',
@@ -39,6 +61,14 @@ const lanes = [
     reactDomTypes: '19.2.7',
   },
 ]
+
+if (sourceMode) {
+  console.log(
+    `Source documentation verification passed (${sourceDocumentation.size} files)`,
+  )
+  process.exit(0)
+}
+
 const temporaryRoot = await mkdtemp(
   path.join(tmpdir(), 'react-swipe-actions-package-'),
 )
@@ -193,4 +223,184 @@ function run(command, args, cwd = repositoryRoot) {
     },
     maxBuffer: 10 * 1024 * 1024,
   })
+}
+
+async function validateSourceDocumentation() {
+  const files = new Map()
+  for (const relativePath of documentationFiles) {
+    const absolutePath = path.join(repositoryRoot, relativePath)
+    assert.ok(
+      await pathExists(absolutePath),
+      `Required documentation file is missing: ${relativePath}`,
+    )
+    files.set(relativePath, await readFile(absolutePath, 'utf8'))
+  }
+
+  const packageJson = JSON.parse(
+    await readFile(path.join(repositoryRoot, 'package.json'), 'utf8'),
+  )
+  const publicApi = JSON.parse(
+    await readFile(path.join(import.meta.dirname, 'public-api.json'), 'utf8'),
+  )
+  assert.equal(packageJson.license, 'MIT')
+  assert.equal(packageJson.homepage, `${repositoryUrl}#readme`)
+  assert.deepEqual(packageJson.bugs, { url: `${repositoryUrl}/issues` })
+
+  const license = await readFile(path.join(repositoryRoot, 'LICENSE'), 'utf8')
+  assert.match(license, /^MIT License\r?\n/)
+
+  const readme = files.get('README.md')
+  assert.ok(readme, 'README.md must be readable')
+  assert.ok(
+    markdownLinks(readme).some(({ target }) => target === repositoryUrl),
+    'README.md must link to the canonical repository URL',
+  )
+  assert.ok(
+    shellBlocks(readme).some(
+      (command) => command === `npm install ${packageName}`,
+    ),
+    'README.md must provide the package installation command',
+  )
+  assertDocumentedImportsExist(readme, packageJson.exports, publicApi)
+
+  const changelog = files.get('CHANGELOG.md')
+  assert.ok(changelog, 'CHANGELOG.md must be readable')
+  assert.match(
+    changelog,
+    /^## \[0\.1\.0-alpha\.0\] - Unreleased$/m,
+    'CHANGELOG.md must contain the unreleased 0.1.0-alpha.0 section',
+  )
+
+  const contributing = files.get('CONTRIBUTING.md')
+  assert.ok(contributing, 'CONTRIBUTING.md must be readable')
+  assertDocumentedNpmScript(contributing, packageJson.scripts, 'check')
+  assertDocumentedNpmScript(contributing, packageJson.scripts, 'test:e2e')
+  assert.ok(
+    markdownLinks(contributing).some(
+      ({ target }) => target === `${repositoryUrl}/issues/new/choose`,
+    ),
+    'CONTRIBUTING.md must link to the public support route',
+  )
+
+  const security = files.get('SECURITY.md')
+  assert.ok(security, 'SECURITY.md must be readable')
+  const privateReportUrl = `${repositoryUrl}/security/advisories/new`
+  assert.ok(
+    markdownLinks(security).some(({ target }) => target === privateReportUrl),
+    'SECURITY.md must link to private GitHub vulnerability reporting',
+  )
+
+  const release = files.get('docs/RELEASING.md')
+  assert.ok(release, 'docs/RELEASING.md must be readable')
+  assertDocumentedNpmScript(release, packageJson.scripts, 'check')
+  assert.ok(
+    shellBlocks(release).some(
+      (command) =>
+        command === 'npm publish --dry-run --provenance --access public',
+    ),
+    'docs/RELEASING.md must document the provenance dry run command',
+  )
+
+  for (const [relativePath, source] of files) {
+    await assertLocalMarkdownLinksResolve(relativePath, source)
+  }
+
+  return files
+}
+
+function assertDocumentedImportsExist(readme, exportsMap, publicApi) {
+  const approvedSymbols = new Set([...publicApi.runtime, ...publicApi.types])
+
+  for (const source of typescriptBlocks(readme)) {
+    for (const specifier of source.matchAll(
+      /from\s+['"]@nipe-solutions\/react-swipe-actions([^'"]*)['"]/g,
+    )) {
+      const subpath = specifier[1] || '.'
+      assert.ok(
+        Object.hasOwn(exportsMap, subpath),
+        `README.md imports an unavailable package subpath: ${subpath}`,
+      )
+    }
+
+    for (const namedImport of source.matchAll(
+      /import\s*\{([^}]*)\}\s*from\s*['"]@nipe-solutions\/react-swipe-actions['"]/g,
+    )) {
+      for (const imported of namedImport[1].split(',')) {
+        const symbol = imported
+          .trim()
+          .replace(/^type\s+/, '')
+          .split(/\s+as\s+/, 1)[0]
+        if (symbol.length === 0) {
+          continue
+        }
+        assert.ok(
+          approvedSymbols.has(symbol),
+          `README.md imports an unavailable public symbol: ${symbol}`,
+        )
+      }
+    }
+  }
+}
+
+function assertDocumentedNpmScript(source, scripts, name) {
+  assert.ok(
+    shellBlocks(source).some((command) => command === `npm run ${name}`),
+    `Documentation must contain npm run ${name}`,
+  )
+  assert.ok(scripts[name], `package.json must define the ${name} script`)
+}
+
+async function assertLocalMarkdownLinksResolve(relativePath, source) {
+  for (const { target } of markdownLinks(source)) {
+    if (
+      target.startsWith('#') ||
+      target.startsWith('http://') ||
+      target.startsWith('https://') ||
+      target.startsWith('mailto:')
+    ) {
+      continue
+    }
+
+    const [pathname] = target.split('#', 1)
+    const destination = path.resolve(
+      repositoryRoot,
+      path.dirname(relativePath),
+      pathname,
+    )
+    assert.ok(
+      await pathExists(destination),
+      `${relativePath} links to a missing local path: ${target}`,
+    )
+  }
+}
+
+function markdownLinks(source) {
+  return [
+    ...source.matchAll(/\[[^\]]+\]\(([^)\s]+)(?:\s+['"][^'"]*['"])?\)/g),
+  ].map(([, target]) => ({ target }))
+}
+
+function shellBlocks(source) {
+  return [...source.matchAll(/```(?:bash|sh)\r?\n([\s\S]*?)```/g)].flatMap(
+    ([, block]) =>
+      block
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && !line.startsWith('#')),
+  )
+}
+
+function typescriptBlocks(source) {
+  return [...source.matchAll(/```(?:tsx|ts)\r?\n([\s\S]*?)```/g)].map(
+    ([, block]) => block,
+  )
+}
+
+async function pathExists(target) {
+  try {
+    await access(target)
+    return true
+  } catch {
+    return false
+  }
 }

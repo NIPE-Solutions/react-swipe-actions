@@ -54,6 +54,7 @@ interface RootMotionAdapter {
   measurements(): MeasurementSnapshot
   direction(): SwipeActionsDirection
   setArmedSide(side: SwipeActionsSide | null): void
+  clearFullSwipeExpansion(): void
 }
 
 const DEFAULT_OPEN_THRESHOLD = 0.35
@@ -199,6 +200,9 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         },
         setPhase: (phase) => {
           elementRef.current?.setAttribute('data-state', phase)
+          if (phase === 'closed' || phase === 'open') {
+            motionRef.current?.clearFullSwipeExpansion()
+          }
         },
         setArmedSide: (side) => motionRef.current?.setArmedSide(side),
       })
@@ -684,6 +688,7 @@ function createRootMotionAdapter(
   let offset = 0
   let armedSide: SwipeActionsSide | null = null
   let armedAction: HTMLButtonElement | null = null
+  let expandingAction: HTMLButtonElement | null = null
   let reducedMotion = false
   let activeSettle: ActiveSettle | null = null
 
@@ -722,6 +727,50 @@ function createRootMotionAdapter(
     )
     armedAction.style.setProperty(
       '--swipe-actions-full-swipe-progress',
+      String(progress),
+    )
+  }
+
+  const clearFullSwipeExpansion = () => {
+    if (expandingAction === null) {
+      return
+    }
+
+    expandingAction.removeAttribute('data-full-swipe-expanding')
+    expandingAction.style.removeProperty(
+      '--swipe-actions-full-swipe-expansion-width',
+    )
+    expandingAction.style.removeProperty(
+      '--swipe-actions-full-swipe-expansion-progress',
+    )
+    expandingAction = null
+  }
+
+  const writeFullSwipeExpansion = (
+    snapshot: MeasurementSnapshot,
+    side: SwipeActionsSide | null,
+  ) => {
+    const nextAction =
+      side === null ? null : (snapshot[side].fullSwipeAction?.element ?? null)
+
+    if (nextAction !== expandingAction) {
+      clearFullSwipeExpansion()
+      expandingAction = nextAction
+    }
+
+    if (expandingAction === null || snapshot.contentWidth <= 0) {
+      return
+    }
+
+    const width = Math.min(snapshot.contentWidth, Math.abs(offset))
+    const progress = width / snapshot.contentWidth
+    expandingAction.setAttribute('data-full-swipe-expanding', '')
+    expandingAction.style.setProperty(
+      '--swipe-actions-full-swipe-expansion-width',
+      `${width}px`,
+    )
+    expandingAction.style.setProperty(
+      '--swipe-actions-full-swipe-expansion-progress',
       String(progress),
     )
   }
@@ -781,10 +830,16 @@ function createRootMotionAdapter(
       '--swipe-actions-trailing-progress',
       activeSide === 'trailing' ? String(progress) : '0',
     )
+    if (activeSide === null) {
+      element.removeAttribute('data-revealing-side')
+    } else {
+      element.setAttribute('data-revealing-side', activeSide)
+    }
     const content = firstContentElement(element)
     if (content !== null) {
       content.style.transform = `translate3d(${offset}px, 0, 0)`
     }
+    writeFullSwipeExpansion(snapshot, activeSide)
     writeArmedAction()
   }
 
@@ -836,6 +891,7 @@ function createRootMotionAdapter(
         writeArmedAction()
       }
     },
+    clearFullSwipeExpansion,
   }
 
   function finishSettle(settle: ActiveSettle, result: AnimationResult) {

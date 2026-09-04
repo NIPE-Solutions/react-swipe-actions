@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import { parse } from 'yaml'
@@ -99,6 +100,11 @@ function validateReleaseWorkflow(workflow) {
   assert.deepEqual(workflow.on.release.types, ['published'])
   assert.equal(workflow.on.workflow_dispatch.inputs.confirm.type, 'boolean')
   assert.equal(workflow.on.workflow_dispatch.inputs.confirm.required, true)
+  assert.equal(
+    workflow.concurrency.group,
+    'npm-nipe-solutions-react-swipe-actions-alpha',
+  )
+  assert.doesNotMatch(workflow.concurrency.group, /github\.(ref|sha)/)
   assert.equal(workflow.concurrency['cancel-in-progress'], false)
 
   const verify = workflow.jobs.verify
@@ -106,13 +112,13 @@ function validateReleaseWorkflow(workflow) {
   assert.ok(verify)
   assert.ok(publish)
   assert.equal(verify.permissions, undefined)
-  assert.deepEqual(publish.permissions, {
-    contents: 'read',
-    'id-token': 'write',
-  })
+  assert.deepEqual(publish.permissions, { 'id-token': 'write' })
   assert.equal(publish.needs, 'verify')
   assert.equal(publish.environment, 'release')
-  assert.match(publish.if, /confirm/)
+  assert.equal(
+    publish.if,
+    "github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.confirm == true)",
+  )
 
   const verifyCommands = runCommands(verify)
   assert.ok(verifyCommands.includes('npm ci'))
@@ -123,17 +129,75 @@ function validateReleaseWorkflow(workflow) {
     ),
   )
   assert.ok(verifyCommands.includes('npm run test:e2e'))
-  assert.ok(verifyCommands.includes('npm run release:check -- --dry-run'))
+  assert.ok(
+    verifyCommands.includes(
+      'npm run release:check -- --dry-run --output release-artifact',
+    ),
+  )
+  assert.deepEqual(verify.outputs, {
+    tarball: '${{ steps.release.outputs.tarball }}',
+    channel: '${{ steps.release.outputs.channel }}',
+  })
 
+  const releaseStep = stepsFor(verify).find((step) => step.id === 'release')
+  const uploadStep = stepsFor(verify).find((step) =>
+    step.uses?.startsWith('actions/upload-artifact@'),
+  )
+  assert.ok(releaseStep)
+  assert.ok(uploadStep)
+  assert.ok(
+    stepsFor(verify).indexOf(uploadStep) >
+      stepsFor(verify).indexOf(releaseStep),
+  )
+  assert.equal(uploadStep.with.name, 'npm-package-alpha')
+  assert.equal(uploadStep.with.path, 'release-artifact')
+  assert.equal(uploadStep.with['if-no-files-found'], 'error')
+  assert.ok(uploadStep.with['retention-days'] <= 3)
+
+  const publishSteps = stepsFor(publish)
   const publishCommands = runCommands(publish)
-  const releaseCheck = publishCommands.indexOf(
-    'npm run release:check -- --dry-run',
+  assert.equal(
+    publishSteps.some((step) => step.uses?.startsWith('actions/checkout@')),
+    false,
   )
-  const npmPublish = publishCommands.indexOf(
-    'npm publish --provenance --access public --tag alpha',
+  const setupNode = publishSteps.find((step) =>
+    step.uses?.startsWith('actions/setup-node@'),
   )
-  assert.ok(releaseCheck >= 0)
-  assert.ok(npmPublish > releaseCheck)
+  assert.equal(String(setupNode?.with?.['node-version']), '24')
+  assert.equal(setupNode?.with?.cache, undefined)
+  assert.equal(setupNode?.with?.['registry-url'], 'https://registry.npmjs.org')
+
+  const downloadStep = publishSteps.find((step) =>
+    step.uses?.startsWith('actions/download-artifact@'),
+  )
+  assert.equal(downloadStep?.with?.name, 'npm-package-alpha')
+  assert.equal(downloadStep?.with?.path, 'release-artifact')
+
+  const expectedPublish =
+    'npm publish "release-artifact/${{ needs.verify.outputs.tarball }}" --ignore-scripts --provenance --access public --tag "${{ needs.verify.outputs.channel }}"'
+  assert.equal(
+    publishSteps.at(-1).run,
+    expectedPublish,
+    'npm publish must be the final privileged step',
+  )
+  assert.equal(publishCommands.length, 2)
+  assert.match(publishCommands[0], /sha512sum --check --strict/)
+  assert.equal(publishCommands[1], expectedPublish)
+  assert.doesNotMatch(
+    publishCommands.join('\n'),
+    /npm ci|npm run|npm pack|npx |node scripts\//,
+  )
+
+  const publishOccurrences = Object.values(workflow.jobs).flatMap((job) =>
+    runCommands(job).flatMap(
+      (command) => command.match(/\bnpm\s+publish\b/g) ?? [],
+    ),
+  )
+  assert.equal(
+    publishOccurrences.length,
+    1,
+    'workflow must contain exactly one npm publish command',
+  )
 
   const serialized = JSON.stringify(workflow)
   assert.doesNotMatch(serialized, /NODE_AUTH_TOKEN|NPM_TOKEN|secrets\./i)
@@ -192,13 +256,57 @@ test('release policy rejects long-lived npm credentials', async () => {
   )
 })
 
-test('release policy rejects publication before release verification', async () => {
+test('release policy rejects a manual dispatch without explicit confirmation', async () => {
   const workflow = await readYaml('.github/workflows/release.yml')
-  workflow.jobs.publish.steps.reverse()
+  workflow.jobs.publish.if =
+    "github.event_name == 'release' || github.event_name == 'workflow_dispatch'"
 
   assert.throws(
     () => validateReleaseWorkflow(workflow),
-    /false == true|The expression evaluated to a falsy value/,
+    /Expected values to be strictly equal/,
+  )
+})
+
+test('release policy rejects dependency installation in the OIDC job', async () => {
+  const workflow = await readYaml('.github/workflows/release.yml')
+  workflow.jobs.publish.steps.splice(-1, 0, { run: 'npm ci' })
+
+  assert.throws(
+    () => validateReleaseWorkflow(workflow),
+    /Expected values to be strictly equal|npm ci/,
+  )
+})
+
+test('release policy rejects any extra npm publish command', async () => {
+  const workflow = await readYaml('.github/workflows/release.yml')
+  workflow.jobs.verify.steps.unshift({ run: 'npm publish --dry-run' })
+
+  assert.throws(
+    () => validateReleaseWorkflow(workflow),
+    /exactly one npm publish command/,
+  )
+})
+
+test('release policy rejects publication before the final privileged step', async () => {
+  const workflow = await readYaml('.github/workflows/release.yml')
+  const steps = workflow.jobs.publish.steps
+  const checksumStep = steps.at(-2)
+  steps[steps.length - 2] = steps.at(-1)
+  steps[steps.length - 1] = checksumStep
+
+  assert.throws(
+    () => validateReleaseWorkflow(workflow),
+    /final privileged step/,
+  )
+})
+
+test('release policy rejects ref-scoped publication concurrency', async () => {
+  const workflow = await readYaml('.github/workflows/release.yml')
+  workflow.concurrency.group = 'release-${{ github.ref }}'
+
+  assert.throws(
+    () => validateReleaseWorkflow(workflow),
+    /npm-nipe-solutions-react-swipe-actions-alpha/,
   )
 })
 
@@ -280,6 +388,18 @@ test('release metadata requires the approved prerelease identity and provenance'
         changelog,
       ),
     /dist-tag.*alpha/,
+  )
+  assert.throws(
+    () =>
+      validateReleaseMetadata(
+        {
+          ...packageJson,
+          version: '0.1.0-beta.0',
+          publishConfig: { ...packageJson.publishConfig, tag: 'beta' },
+        },
+        '# Changelog\n\n## [0.1.0-beta.0] - Unreleased\n',
+      ),
+    /0\.1 prereleases must use the alpha channel/,
   )
   assert.throws(
     () => validateReleaseMetadata(packageJson, '# Changelog\n'),
@@ -365,4 +485,32 @@ test('release registry policy rejects an existing package version', async () => 
     () => assertRegistryVersionAbsent('0.1.0-alpha.0', '0.1.0-alpha.0'),
     /already exists on the npm registry/,
   )
+})
+
+test('release output mode preserves a named tarball with a verifiable checksum', async () => {
+  const { parseArguments, writeArtifactChecksum } =
+    await import('./verify-release.mjs')
+  const directory = await mkdtemp(path.join(tmpdir(), 'release-output-test-'))
+  const tarballPath = path.join(directory, 'package.tgz')
+
+  try {
+    await writeFile(tarballPath, 'abc')
+    assert.deepEqual(
+      parseArguments(['--dry-run', '--output', 'release-artifact']),
+      { dryRun: true, outputDirectory: 'release-artifact' },
+    )
+
+    const checksum = await writeArtifactChecksum(tarballPath)
+    assert.deepEqual(checksum, {
+      digest:
+        'ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f',
+      checksumPath: `${tarballPath}.sha512`,
+    })
+    assert.equal(
+      await readFile(`${tarballPath}.sha512`, 'utf8'),
+      `${checksum.digest}  package.tgz\n`,
+    )
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
 })

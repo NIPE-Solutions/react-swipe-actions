@@ -1,0 +1,78 @@
+name: Bug report
+description: Report a reproducible package, gesture, browser, or accessibility defect.
+title: '[bug]: '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report security vulnerabilities here. Use the private reporting route in SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: Package and React versions
+      description: Include the package, react, react-dom, and browser versions.
+      placeholder: '@nipe-solutions/react-swipe-actions 0.1.0-alpha.0; react 19.2.8'
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and operating system
+      description: Include browser version, OS, and whether this was a physical device or emulator.
+      placeholder: 'Safari 18 on iPhone, physical device'
+    validations:
+      required: true
+  - type: dropdown
+    id: pointer
+    attributes:
+      label: Input used
+      options:
+        - Mouse
+        - Touch
+        - Pen
+        - Keyboard
+        - Programmatic state change
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction and steps
+      description: Provide a repository, runnable snippet, or exact steps from a fresh page.
+      placeholder: |
+        1. Render one row with ...
+        2. Swipe from ... to ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: gesture_context
+    attributes:
+      label: Gesture and layout context
+      description: State LTR/RTL, leading/trailing side, scroll container, nested gesture container, row width, and interactive child involvement.
+    validations:
+      required: true
+  - type: textarea
+    id: expected_actual
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: accessibility
+    attributes:
+      label: Accessibility evidence
+      description: Describe keyboard focus order, screen reader results, inert/hidden action behavior, and any assistive technology used. Say "not applicable" only when it cannot affect the report.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Report checks
+      options:
+        - label: I searched existing issues and removed private data from this report.
+          required: true
+        - label: I can reproduce this with the listed versions and steps.
+          required: true

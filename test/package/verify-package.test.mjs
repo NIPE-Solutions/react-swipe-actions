@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
@@ -19,6 +19,18 @@ test('package metadata points to the approved GitHub repository', async () => {
     type: 'git',
     url: 'git+https://github.com/nipe-solutions/react-swipe-actions.git',
   })
+})
+
+test('interaction guide documents RTL keyboard mapping from physical edges', async () => {
+  const guide = await readFile(
+    path.join(repositoryRoot, 'docs/guides/interaction-accessibility.md'),
+    'utf8',
+  )
+
+  assert.match(
+    guide,
+    /In RTL,\s+ArrowLeft therefore opens `trailing`, while ArrowRight opens `leading`\./,
+  )
 })
 
 test('public API checker rejects an exported gesture internal', async () => {

@@ -56,8 +56,9 @@
     "test:size": "node scripts/check-bundle-size.mjs",
     "test:package": "npm run build:dist && node --test test/package/verify-package.test.mjs",
     "test:workflows": "node --test scripts/verify-workflows.test.mjs",
+    "test:clean-check": "node --test scripts/verify-clean-check.test.mjs",
     "release:check": "node scripts/verify-release.mjs",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run test:workflows && npm run build:dist && npm run test:api && npm run test:size && npm run test:package && npm run build:website && npm run verify:website",
+    "check": "npm run format:check && npm run lint && npm run build:dist && npm run typecheck && npm run test:unit && npm run test:workflows && npm run test:clean-check && npm run test:api && npm run test:size && npm run test:package && npm run build:website && npm run verify:website",
     "clean": "rm -rf dist coverage"
   },
   "prettier": {

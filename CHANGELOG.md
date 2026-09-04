@@ -13,6 +13,8 @@ All notable changes are documented in this file.
 
 ### Fixed
 
+- Build the distribution before typechecking package self-imports, and verify
+  the complete quality gate in a tracked snapshot with no stale `dist` output.
 - Declared Node globals for the workflow-policy test so the clean lint gate
   covers its release-shell regressions.
 - Corrected the interaction guide's RTL keyboard mapping and added a package

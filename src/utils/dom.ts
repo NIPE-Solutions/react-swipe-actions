@@ -24,11 +24,19 @@ const EDITABLE_SELECTOR = [
   '[contenteditable]:not([contenteditable="false"])',
 ].join(',')
 
-const originalAriaHidden = new WeakMap<HTMLElement, string | null>()
-const originalTabIndexes = new WeakMap<
-  HTMLElement,
-  Map<HTMLElement, string | null>
->()
+interface InertRestoration {
+  ariaHidden?: string | null
+  inert?: boolean
+}
+
+interface InertState {
+  ariaHidden: string | null
+  inert: boolean
+  tabIndexes: Map<HTMLElement, string | null>
+  observer: MutationObserver | null
+}
+
+const inertStates = new WeakMap<HTMLElement, InertState>()
 
 export function isInteractiveTarget(target: EventTarget | null): boolean {
   const element = targetElement(target)
@@ -57,39 +65,123 @@ export function focusFirstEnabled(container: HTMLElement): boolean {
   return false
 }
 
-export function setSubtreeInert(element: HTMLElement, inert: boolean): void {
-  ;(element as HTMLElement & { inert: boolean }).inert = inert
-
+export function setSubtreeInert(
+  element: HTMLElement,
+  inert: boolean,
+  restoration?: InertRestoration,
+): void {
   if (inert) {
-    if (!originalAriaHidden.has(element)) {
-      originalAriaHidden.set(element, element.getAttribute('aria-hidden'))
+    let state = inertStates.get(element)
+    if (state === undefined) {
+      state = createInertState(element, restoration)
+      inertStates.set(element, state)
+    } else {
+      recordTabIndexChanges(state, state.observer?.takeRecords() ?? [])
+      updateRestoration(state, restoration)
     }
+
+    ;(element as HTMLElement & { inert: boolean }).inert = true
     element.setAttribute('aria-hidden', 'true')
-
-    const tabIndexes = originalTabIndexes.get(element) ?? new Map()
-    originalTabIndexes.set(element, tabIndexes)
-
-    const candidates = [
-      ...(element.matches(FOCUSABLE_SELECTOR) ? [element] : []),
-      ...element.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-    ]
-    for (const candidate of candidates) {
-      if (tabIndexes.has(candidate)) {
-        candidate.setAttribute('tabindex', '-1')
-        continue
-      }
-      if (candidate.tabIndex < 0) {
-        continue
-      }
-
-      tabIndexes.set(candidate, candidate.getAttribute('tabindex'))
-      candidate.setAttribute('tabindex', '-1')
-    }
+    trackFocusableCandidates(element, state)
+    forceTrackedTabIndexes(state)
+    state.observer?.takeRecords()
     return
   }
 
-  restoreAriaHidden(element)
-  restoreTabIndexes(element)
+  const state = inertStates.get(element)
+  if (state === undefined) {
+    ;(element as HTMLElement & { inert: boolean }).inert =
+      restoration?.inert ?? false
+    return
+  }
+
+  recordTabIndexChanges(state, state.observer?.takeRecords() ?? [])
+  updateRestoration(state, restoration)
+  state.observer?.disconnect()
+  inertStates.delete(element)
+
+  ;(element as HTMLElement & { inert: boolean }).inert = state.inert
+  restoreAriaHidden(element, state.ariaHidden)
+  restoreTabIndexes(state.tabIndexes)
+}
+
+function createInertState(
+  element: HTMLElement,
+  restoration: InertRestoration | undefined,
+): InertState {
+  const state: InertState = {
+    ariaHidden:
+      restoration?.ariaHidden === undefined
+        ? element.getAttribute('aria-hidden')
+        : restoration.ariaHidden,
+    inert:
+      restoration?.inert ??
+      Boolean((element as HTMLElement & { inert?: boolean }).inert),
+    tabIndexes: new Map(),
+    observer: null,
+  }
+  const MutationObserverConstructor =
+    element.ownerDocument.defaultView?.MutationObserver ??
+    (typeof MutationObserver === 'undefined' ? null : MutationObserver)
+  if (MutationObserverConstructor === null) {
+    return state
+  }
+
+  const observer = new MutationObserverConstructor((records) => {
+    recordTabIndexChanges(state, records)
+    forceTrackedTabIndexes(state)
+    observer.takeRecords()
+  })
+  observer.observe(element, {
+    attributes: true,
+    attributeFilter: ['tabindex'],
+    subtree: true,
+  })
+  state.observer = observer
+  return state
+}
+
+function updateRestoration(
+  state: InertState,
+  restoration: InertRestoration | undefined,
+) {
+  if (restoration?.ariaHidden !== undefined) {
+    state.ariaHidden = restoration.ariaHidden
+  }
+  if (restoration?.inert !== undefined) {
+    state.inert = restoration.inert
+  }
+}
+
+function trackFocusableCandidates(element: HTMLElement, state: InertState) {
+  const candidates = [
+    ...(element.matches(FOCUSABLE_SELECTOR) ? [element] : []),
+    ...element.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+  ]
+  for (const candidate of candidates) {
+    if (state.tabIndexes.has(candidate) || candidate.tabIndex < 0) {
+      continue
+    }
+
+    state.tabIndexes.set(candidate, candidate.getAttribute('tabindex'))
+  }
+}
+
+function recordTabIndexChanges(state: InertState, records: MutationRecord[]) {
+  for (const record of records) {
+    const candidate = record.target as HTMLElement
+    if (state.tabIndexes.has(candidate)) {
+      state.tabIndexes.set(candidate, candidate.getAttribute('tabindex'))
+    }
+  }
+}
+
+function forceTrackedTabIndexes(state: InertState) {
+  for (const candidate of state.tabIndexes.keys()) {
+    if (candidate.getAttribute('tabindex') !== '-1') {
+      candidate.setAttribute('tabindex', '-1')
+    }
+  }
 }
 
 function targetElement(target: EventTarget | null): Element | null {
@@ -108,14 +200,7 @@ function isDisabled(element: HTMLElement): boolean {
   )
 }
 
-function restoreAriaHidden(element: HTMLElement) {
-  if (!originalAriaHidden.has(element)) {
-    return
-  }
-
-  const value = originalAriaHidden.get(element)
-  originalAriaHidden.delete(element)
-
+function restoreAriaHidden(element: HTMLElement, value: string | null) {
   if (value === null || value === undefined) {
     element.removeAttribute('aria-hidden')
   } else {
@@ -123,13 +208,7 @@ function restoreAriaHidden(element: HTMLElement) {
   }
 }
 
-function restoreTabIndexes(element: HTMLElement) {
-  const tabIndexes = originalTabIndexes.get(element)
-  if (tabIndexes === undefined) {
-    return
-  }
-
-  originalTabIndexes.delete(element)
+function restoreTabIndexes(tabIndexes: Map<HTMLElement, string | null>) {
   for (const [candidate, value] of tabIndexes) {
     if (value === null) {
       candidate.removeAttribute('tabindex')

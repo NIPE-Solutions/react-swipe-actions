@@ -45,6 +45,8 @@ export const Action = forwardRef<HTMLButtonElement, SwipeActionsActionProps>(
     const registerAction = root?.registerAction
     const updateActionWidth = root?.updateActionWidth
     const configurationChanged = root?.configurationChanged
+    const inactive =
+      root !== null && side !== undefined && root.openSide !== side
 
     invokeRef.current = onAction
     actionRef.current.fullSwipe = fullSwipe
@@ -127,6 +129,7 @@ export const Action = forwardRef<HTMLButtonElement, SwipeActionsActionProps>(
         data-full-swipe={fullSwipe ? '' : undefined}
         data-destructive={destructive ? '' : undefined}
         data-disabled={disabled ? '' : undefined}
+        tabIndex={inactive ? -1 : buttonProps.tabIndex}
       />
     )
   },

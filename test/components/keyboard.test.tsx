@@ -36,6 +36,7 @@ function KeyboardRow({
         </button>
         <input aria-label="Subject" />
         <button type="button">Open message</button>
+        <a href="#message">Open message link</a>
       </Content>
       <Trailing data-testid="trailing">
         <Action onAction={() => undefined}>Delete</Action>
@@ -143,5 +144,71 @@ describe('SwipeActions keyboard disclosure', () => {
     expect(onOpenSideChange).not.toHaveBeenCalled()
     expect(document.activeElement).toBe(contentButton)
     expect(screen.getByTestId('root')).toHaveAttribute('data-state', 'closed')
+  })
+
+  it.each([
+    ['button', 'Open message'],
+    ['link', 'Open message link'],
+  ] as const)(
+    'does not steal physical arrows from an unhandled %s descendant',
+    (role, name) => {
+      // Catches ordinary native controls bubbling unhandled arrow keys into Root disclosure.
+      const onOpenSideChange = vi.fn()
+      render(<KeyboardRow onOpenSideChange={onOpenSideChange} />)
+      const target = screen.getByRole(role, { name })
+      target.focus()
+      const left = new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'ArrowLeft',
+      })
+      const right = new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'ArrowRight',
+      })
+
+      fireEvent(target, left)
+      fireEvent(target, right)
+
+      expect(onOpenSideChange).not.toHaveBeenCalled()
+      expect(left.defaultPrevented).toBe(false)
+      expect(right.defaultPrevented).toBe(false)
+      expect(screen.getByTestId('root')).toHaveAttribute('data-state', 'closed')
+      expect(document.activeElement).toBe(target)
+    },
+  )
+
+  it('preserves an action tabindex update made while closed and skips it on reveal', () => {
+    // Catches fallback cleanup removing a consumer's newer -1 and focusing that action.
+    function Row({ firstTabIndex }: { firstTabIndex?: number }) {
+      return (
+        <Root data-testid="root">
+          <Leading>
+            <Action
+              {...(firstTabIndex === undefined
+                ? {}
+                : { tabIndex: firstTabIndex })}
+              onAction={() => undefined}
+            >
+              First action
+            </Action>
+            <Action onAction={() => undefined}>Second action</Action>
+          </Leading>
+          <Content>Message</Content>
+        </Root>
+      )
+    }
+    const rendered = render(<Row />)
+
+    rendered.rerender(<Row firstTabIndex={-1} />)
+    fireEvent.keyDown(screen.getByTestId('root'), { key: 'ArrowLeft' })
+
+    expect(
+      screen.getByRole('button', { name: 'First action' }),
+    ).toHaveAttribute('tabindex', '-1')
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Second action' }),
+    )
   })
 })

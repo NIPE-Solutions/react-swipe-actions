@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import { Action, Content, Leading, Root, Trailing } from '../../src'
@@ -16,6 +17,23 @@ function ActionsRow({ disabled = false }: { disabled?: boolean }) {
         <Action onAction={() => undefined}>Delete</Action>
       </Trailing>
     </Root>
+  )
+}
+
+function DynamicSide() {
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <>
+      <button type="button" onClick={() => setVisible(true)}>
+        Mount trailing side
+      </button>
+      {visible ? (
+        <Trailing data-testid="dynamic-trailing">
+          <button type="button">Dynamic action</button>
+        </Trailing>
+      ) : null}
+    </>
   )
 }
 
@@ -85,5 +103,27 @@ describe('SwipeActions accessibility', () => {
     fireEvent.keyDown(screen.getByTestId('root'), { key: 'ArrowLeft' })
 
     expect(side).toHaveAttribute('tabindex', '2')
+  })
+
+  it('immediately inerts a closed side inserted by a child without rerendering Root', () => {
+    // Catches side registration relying on a later Root render to hide newly mounted controls.
+    render(
+      <Root>
+        <Leading>
+          <Action onAction={() => undefined}>Archive</Action>
+        </Leading>
+        <Content>Message</Content>
+        <DynamicSide />
+      </Root>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mount trailing side' }))
+
+    const side = screen.getByTestId('dynamic-trailing')
+    expect(side).toHaveAttribute('aria-hidden', 'true')
+    expect((side as HTMLElement & { inert: boolean }).inert).toBe(true)
+    expect(
+      screen.getByRole('button', { name: 'Dynamic action', hidden: true }),
+    ).toHaveAttribute('tabindex', '-1')
   })
 })

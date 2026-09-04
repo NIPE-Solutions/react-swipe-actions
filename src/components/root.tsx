@@ -25,7 +25,7 @@ import { physicalSign, sideFromArrowKey } from '../state/direction'
 import {
   focusFirstEnabled,
   isEditableTarget,
-  setSubtreeInert,
+  isInteractiveTarget,
 } from '../utils/dom'
 import { warnOnce } from '../utils/warn'
 import { GroupContext, RootContext } from './context'
@@ -500,14 +500,6 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         activeElement !== null &&
         previousContainer?.contains(activeElement) === true
 
-      for (const side of ['leading', 'trailing'] as const) {
-        for (const registration of sideRegistrationsRef.current[
-          side
-        ].values()) {
-          setSubtreeInert(registration.element, side !== openSide)
-        }
-      }
-
       const pendingSide = pendingKeyboardFocusRef.current
       if (pendingSide !== null && pendingSide === openSide) {
         pendingKeyboardFocusRef.current = null
@@ -607,6 +599,13 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
                 event.preventDefault()
                 requestOpenSideRef.current(null)
               }
+              return
+            }
+
+            if (
+              event.target !== event.currentTarget &&
+              isInteractiveTarget(event.target)
+            ) {
               return
             }
 

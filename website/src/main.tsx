@@ -9,6 +9,7 @@ import { InboxDemo } from './components/InboxDemo'
 import {
   apiRows,
   canonicalCode,
+  completeCanonicalCode,
   controlledCode,
   groupCode,
   installCommand,
@@ -90,12 +91,14 @@ function Website() {
         </div>
         <InboxDemo />
         <section id="quick-start" className="quick-start">
-          <h2>Quick start</h2>
           <div data-testid="canonical-code">
+            <div className="quick-start__heading">
+              <h2>Quick start</h2>
+              <a className="quick-start__more" href="#complete-example">
+                View complete example
+              </a>
+            </div>
             <CodeBlock code={canonicalCode} label="MessageRow excerpt" />
-            <a className="quick-start__more" href="#examples">
-              Continue to complete examples
-            </a>
           </div>
         </section>
       </div>
@@ -105,6 +108,13 @@ function Website() {
         title="Anatomy"
         intro="The DOM stays explicit: action sides sit behind one draggable content layer."
       >
+        <div id="complete-example" className="complete-example">
+          <div className="complete-example__heading">
+            <h3>Complete message row</h3>
+            <p>Copy this version when starting a real row.</p>
+          </div>
+          <CodeBlock code={completeCanonicalCode} label="MessageRow.tsx" />
+        </div>
         <div className="anatomy-diagram" aria-label="Swipe row DOM layers">
           <div>
             <span>Root</span>

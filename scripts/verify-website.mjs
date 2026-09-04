@@ -4,6 +4,7 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 import AxeBuilder from '@axe-core/playwright'
 import { chromium } from '@playwright/test'
+import ts from 'typescript'
 
 const repositoryRoot = path.resolve(import.meta.dirname, '..')
 const websiteRoot = path.join(repositoryRoot, 'website')
@@ -132,6 +133,7 @@ try {
 
   await verifyPrimaryDemo(page)
   await verifyCustomStyling(page)
+  await verifyCanonicalSamples(page)
 
   const accessibility = await new AxeBuilder({ page }).analyze()
   assert.deepEqual(
@@ -458,7 +460,7 @@ async function verifyOpeningGeometry(page, viewport) {
   assert.equal(
     await page
       .getByTestId('canonical-code')
-      .locator('a[href="#examples"]')
+      .locator('a[href="#complete-example"]')
       .count(),
     1,
     'The compact excerpt routes to the full composition documentation',
@@ -493,6 +495,100 @@ async function verifyCustomStyling(page) {
     await page.getByTestId('custom-styling-output').textContent(),
     'Priority raised',
     'Custom styling example remains a live package interaction',
+  )
+}
+
+async function verifyCanonicalSamples(page) {
+  const excerptHost = page.getByTestId('canonical-code')
+  const excerpt = await excerptHost.locator('pre code').textContent()
+  assert.ok(excerpt, 'The compact canonical excerpt renders source code')
+  verifyCanonicalSource(excerpt, 'Compact canonical excerpt', {
+    complete: false,
+  })
+
+  const link = excerptHost.getByRole('link', { name: /complete example/i })
+  const href = await link.getAttribute('href')
+  assert.equal(
+    href,
+    '#complete-example',
+    'The compact excerpt identifies its concrete complete sample',
+  )
+  await link.click()
+  assert.equal(
+    await page.evaluate(() => location.hash),
+    '#complete-example',
+    'The compact excerpt navigates to the complete sample',
+  )
+
+  const target = page.locator('#complete-example')
+  assert.equal(await target.count(), 1, 'The complete sample anchor exists')
+  assert.equal(
+    await target.getByRole('button', { name: 'Copy' }).count(),
+    1,
+    'The complete canonical sample is copyable',
+  )
+  const complete = await target.locator('pre code').textContent()
+  assert.ok(complete, 'The linked target contains canonical source code')
+  verifyCanonicalSource(complete, 'Complete canonical sample', {
+    complete: true,
+  })
+  assert.match(
+    complete,
+    /destructive\s+fullSwipe|fullSwipe\s+destructive/,
+    'The complete sample includes destructive full-swipe behavior',
+  )
+  assert.match(
+    complete,
+    /aria-label=/,
+    'The complete sample gives its root an accessible label',
+  )
+}
+
+function verifyCanonicalSource(source, label, { complete }) {
+  const result = ts.transpileModule(source, {
+    compilerOptions: {
+      jsx: ts.JsxEmit.ReactJSX,
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+    },
+    fileName: `${label.replaceAll(' ', '-')}.tsx`,
+    reportDiagnostics: true,
+  })
+  const syntaxErrors = (result.diagnostics ?? [])
+    .filter((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error)
+    .map((diagnostic) =>
+      ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'),
+    )
+  assert.deepEqual(syntaxErrors, [], `${label} parses as TSX`)
+  assert.match(
+    source,
+    new RegExp(`['"]${escapeRegExp(packageName)}['"]`),
+    `${label} imports the public package`,
+  )
+  assert.match(
+    source,
+    new RegExp(`['"]${escapeRegExp(packageName)}\\/core\\.css['"]`),
+    `${label} imports core.css through the public package`,
+  )
+  const requiredParts = complete
+    ? ['Root', 'Leading', 'Content', 'Trailing']
+    : ['Root', 'Leading', 'Content']
+  for (const part of requiredParts) {
+    assert.match(
+      source,
+      new RegExp(`<(?:(?:[A-Za-z]+\\.)?${part})\\b`),
+      `${label} includes ${part}`,
+    )
+  }
+  assert.ok(
+    source.match(/<(?:(?:[A-Za-z]+\.)?Action)\b/g)?.length >=
+      (complete ? 2 : 1),
+    `${label} includes the required action composition`,
+  )
+  assert.ok(
+    source.match(/onAction=\{[A-Za-z][A-Za-z0-9]*\}/g)?.length >=
+      (complete ? 2 : 1),
+    `${label} supplies required named onAction callbacks`,
   )
 }
 

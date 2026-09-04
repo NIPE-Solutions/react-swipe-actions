@@ -36,6 +36,7 @@ export default tseslint.config(
     files: [
       'scripts/verify-website.mjs',
       'scripts/measure-website-performance.mjs',
+      'scripts/verify-workflows.test.mjs',
     ],
     languageOptions: {
       globals: {

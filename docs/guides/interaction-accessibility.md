@@ -25,7 +25,7 @@ the row to its authoritative resting state.
 - Enter and Space activate the focused native action button.
 
 Arrow keys are converted to logical state after direction is known. In RTL,
-ArrowLeft therefore opens `leading`, while ArrowRight opens `trailing`.
+ArrowLeft therefore opens `trailing`, while ArrowRight opens `leading`.
 
 The root ignores modified key combinations, editable controls, and keyboard
 events already owned by interactive descendants. Give each root an accessible

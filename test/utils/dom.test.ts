@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   focusFirstEnabled,
   isInteractiveTarget,
+  isKeyboardInteractiveTarget,
   setSubtreeInert,
 } from '../../src/utils/dom'
 
@@ -35,6 +36,28 @@ describe('isInteractiveTarget', () => {
     document.body.innerHTML = '<span id="plain">Plain text</span>'
 
     expect(isInteractiveTarget(document.querySelector('#plain'))).toBe(false)
+  })
+})
+
+describe('isKeyboardInteractiveTarget', () => {
+  it('recognizes focusable custom controls, disclosure controls, and media controls', () => {
+    // Catches keyboard exclusions leaking into the narrower pointer control classifier.
+    document.body.innerHTML = `
+      <div role="slider" tabindex="0"><span id="slider-child">Volume</span></div>
+      <details><summary id="summary">Details</summary></details>
+      <audio id="audio" controls></audio>
+      <video id="video" controls></video>
+      <section id="root" tabindex="0"><span id="plain">Plain text</span></section>
+    `
+
+    for (const selector of ['#slider-child', '#summary', '#audio', '#video']) {
+      const target = document.querySelector(selector)
+      expect(isKeyboardInteractiveTarget(target)).toBe(true)
+      expect(isInteractiveTarget(target)).toBe(false)
+    }
+    const root = document.querySelector('#root')!
+    const plain = document.querySelector('#plain')
+    expect(isKeyboardInteractiveTarget(plain, root)).toBe(false)
   })
 })
 
@@ -123,5 +146,58 @@ describe('setSubtreeInert', () => {
     expect(explicit).toHaveAttribute('tabindex', '3')
     expect(focusFirstEnabled(container)).toBe(true)
     expect(document.activeElement).toBe(explicit)
+  })
+
+  it('suppresses focusable descendants inserted after the subtree becomes inert', async () => {
+    // Catches a closed side exposing controls added without a React rerender.
+    document.body.innerHTML = '<section id="actions"></section>'
+    const container = document.querySelector<HTMLElement>('#actions')!
+    setSubtreeInert(container, true)
+
+    const button = document.createElement('button')
+    button.textContent = 'Late action'
+    container.append(button)
+    await Promise.resolve()
+
+    expect(button).toHaveAttribute('tabindex', '-1')
+    setSubtreeInert(container, false)
+    expect(button).not.toHaveAttribute('tabindex')
+  })
+
+  it('suppresses descendants made focusable while inert and preserves their attributes', async () => {
+    // Catches href, contenteditable, input type, and media controls mutations entering the tab order.
+    document.body.innerHTML = `
+      <section id="actions">
+        <a id="link">Link</a>
+        <div id="editable" contenteditable="false">Editable</div>
+        <input id="input" type="hidden" />
+        <audio id="audio"></audio>
+      </section>
+    `
+    const container = document.querySelector<HTMLElement>('#actions')!
+    const link = document.querySelector<HTMLElement>('#link')!
+    const editable = document.querySelector<HTMLElement>('#editable')!
+    const input = document.querySelector<HTMLElement>('#input')!
+    const audio = document.querySelector<HTMLElement>('#audio')!
+    setSubtreeInert(container, true)
+
+    link.setAttribute('href', '#destination')
+    editable.setAttribute('contenteditable', 'true')
+    input.setAttribute('type', 'text')
+    audio.setAttribute('controls', '')
+    await Promise.resolve()
+
+    for (const candidate of [link, editable, input, audio]) {
+      expect(candidate).toHaveAttribute('tabindex', '-1')
+    }
+
+    setSubtreeInert(container, false)
+    for (const candidate of [link, editable, input, audio]) {
+      expect(candidate).not.toHaveAttribute('tabindex')
+    }
+    expect(link).toHaveAttribute('href', '#destination')
+    expect(editable).toHaveAttribute('contenteditable', 'true')
+    expect(input).toHaveAttribute('type', 'text')
+    expect(audio).toHaveAttribute('controls')
   })
 })

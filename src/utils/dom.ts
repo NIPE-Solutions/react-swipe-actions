@@ -7,12 +7,23 @@ const INTERACTIVE_SELECTOR = [
   '[contenteditable]:not([contenteditable="false"])',
 ].join(',')
 
+const KEYBOARD_INTERACTIVE_SELECTOR = [
+  INTERACTIVE_SELECTOR,
+  'summary',
+  'audio[controls]',
+  'video[controls]',
+  '[tabindex]',
+].join(',')
+
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button',
   'input:not([type="hidden"])',
   'select',
   'textarea',
+  'summary',
+  'audio[controls]',
+  'video[controls]',
   '[tabindex]',
   '[contenteditable]:not([contenteditable="false"])',
 ].join(',')
@@ -41,6 +52,21 @@ const inertStates = new WeakMap<HTMLElement, InertState>()
 export function isInteractiveTarget(target: EventTarget | null): boolean {
   const element = targetElement(target)
   return element?.closest(INTERACTIVE_SELECTOR) !== null
+}
+
+export function isKeyboardInteractiveTarget(
+  target: EventTarget | null,
+  boundary?: Element,
+): boolean {
+  const element = targetElement(target)
+  const interactive = element?.closest(KEYBOARD_INTERACTIVE_SELECTOR)
+  if (interactive === null || interactive === undefined) {
+    return false
+  }
+
+  return boundary === undefined
+    ? true
+    : interactive !== boundary && boundary.contains(interactive)
 }
 
 export function isEditableTarget(target: EventTarget | null): boolean {
@@ -129,12 +155,20 @@ function createInertState(
 
   const observer = new MutationObserverConstructor((records) => {
     recordTabIndexChanges(state, records)
+    trackFocusableCandidates(element, state)
     forceTrackedTabIndexes(state)
     observer.takeRecords()
   })
   observer.observe(element, {
     attributes: true,
-    attributeFilter: ['tabindex'],
+    attributeFilter: [
+      'tabindex',
+      'href',
+      'contenteditable',
+      'type',
+      'controls',
+    ],
+    childList: true,
     subtree: true,
   })
   state.observer = observer
@@ -159,7 +193,7 @@ function trackFocusableCandidates(element: HTMLElement, state: InertState) {
     ...element.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
   ]
   for (const candidate of candidates) {
-    if (state.tabIndexes.has(candidate) || candidate.tabIndex < 0) {
+    if (state.tabIndexes.has(candidate)) {
       continue
     }
 
@@ -169,6 +203,10 @@ function trackFocusableCandidates(element: HTMLElement, state: InertState) {
 
 function recordTabIndexChanges(state: InertState, records: MutationRecord[]) {
   for (const record of records) {
+    if (record.type !== 'attributes' || record.attributeName !== 'tabindex') {
+      continue
+    }
+
     const candidate = record.target as HTMLElement
     if (state.tabIndexes.has(candidate)) {
       state.tabIndexes.set(candidate, candidate.getAttribute('tabindex'))

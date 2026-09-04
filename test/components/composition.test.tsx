@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { createRef } from 'react'
-import { describe, expect, expectTypeOf, it } from 'vitest'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import {
   Action,
@@ -133,6 +133,90 @@ describe('SwipeActions compound components', () => {
 
     act(() => handleRef.current?.close())
     expect(screen.getByTestId('root')).toHaveAttribute('data-state', 'closed')
+  })
+
+  it('routes imperative requests through controlled Root state', () => {
+    // Catches the public handle mutating controlled state instead of requesting it.
+    const handleRef = createRef<SwipeActionsHandle>()
+    const onOpenSideChange = vi.fn()
+    const { rerender } = render(
+      <Root
+        ref={handleRef}
+        openSide={null}
+        onOpenSideChange={onOpenSideChange}
+        data-testid="root"
+      >
+        <Leading />
+        <Trailing />
+      </Root>,
+    )
+
+    act(() => handleRef.current?.open('leading'))
+    expect(onOpenSideChange).toHaveBeenCalledExactlyOnceWith('leading')
+    expect(screen.getByTestId('root')).toHaveAttribute('data-state', 'closed')
+
+    rerender(
+      <Root
+        ref={handleRef}
+        openSide="leading"
+        onOpenSideChange={onOpenSideChange}
+        data-testid="root"
+      >
+        <Leading />
+        <Trailing />
+      </Root>,
+    )
+    expect(screen.getByTestId('root')).toHaveAttribute('data-state', 'open')
+
+    act(() => handleRef.current?.close())
+    expect(onOpenSideChange).toHaveBeenNthCalledWith(2, null)
+    expect(screen.getByTestId('root')).toHaveAttribute('data-state', 'open')
+  })
+
+  it('ignores imperative open and close while Root is disabled', () => {
+    // Catches disabled Root allowing its public imperative handle to change state.
+    const closedHandleRef = createRef<SwipeActionsHandle>()
+    const openHandleRef = createRef<SwipeActionsHandle>()
+    const onClosedChange = vi.fn()
+    const onOpenChange = vi.fn()
+
+    render(
+      <>
+        <Root
+          ref={closedHandleRef}
+          disabled
+          onOpenSideChange={onClosedChange}
+          data-testid="closed-root"
+        >
+          <Leading />
+        </Root>
+        <Root
+          ref={openHandleRef}
+          disabled
+          defaultOpenSide="leading"
+          onOpenSideChange={onOpenChange}
+          data-testid="open-root"
+        >
+          <Leading />
+        </Root>
+      </>,
+    )
+
+    act(() => {
+      closedHandleRef.current?.open('leading')
+      openHandleRef.current?.close()
+    })
+
+    expect(screen.getByTestId('closed-root')).toHaveAttribute(
+      'data-state',
+      'closed',
+    )
+    expect(screen.getByTestId('open-root')).toHaveAttribute(
+      'data-state',
+      'open',
+    )
+    expect(onClosedChange).not.toHaveBeenCalled()
+    expect(onOpenChange).not.toHaveBeenCalled()
   })
 
   it('passes through non-conflicting div and ARIA attributes', () => {

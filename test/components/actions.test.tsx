@@ -67,6 +67,44 @@ describe('SwipeActions actions and configuration', () => {
     )
   })
 
+  it('warns once when an Action side is missing Root', async () => {
+    // Catches a Side context masking the missing Root requirement.
+    const { rerender } = render(
+      <Leading>
+        <Action onAction={() => undefined}>Archive</Action>
+      </Leading>,
+    )
+    rerender(
+      <Leading>
+        <Action onAction={() => undefined}>Archive again</Action>
+      </Leading>,
+    )
+
+    await waitFor(() => expect(console.warn).toHaveBeenCalledOnce())
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/Action.*inside.*Root.*Move.*Leading.*root/i),
+    )
+  })
+
+  it('warns once when an Action inside Root is missing a Side', async () => {
+    // Catches Root context masking the required logical Side parent.
+    const { rerender } = render(
+      <Root>
+        <Action onAction={() => undefined}>Archive</Action>
+      </Root>,
+    )
+    rerender(
+      <Root>
+        <Action onAction={() => undefined}>Archive again</Action>
+      </Root>,
+    )
+
+    await waitFor(() => expect(console.warn).toHaveBeenCalledOnce())
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/Action.*inside.*Leading.*Trailing.*Move/i),
+    )
+  })
+
   it.each([
     ['Leading', Leading, 'leading'],
     ['Trailing', Trailing, 'trailing'],
@@ -103,31 +141,10 @@ describe('SwipeActions actions and configuration', () => {
     },
   )
 
-  it('excludes a disabled full-swipe action and warns once when it becomes eligible', async () => {
-    // Catches disabled claimants winning selection or duplicate eligible actions being silent.
-    let registry: RootContextValue | undefined
-    const { rerender } = render(
+  it('warns once for two initially enabled full-swipe actions', async () => {
+    // Catches child-first Action registration being validated before its Side exists.
+    render(
       <Root>
-        <RegistryReader onRegistry={(value) => (registry = value)} />
-        <Leading>
-          <Action disabled fullSwipe onAction={() => undefined}>
-            First
-          </Action>
-          <Action fullSwipe onAction={() => undefined}>
-            Second
-          </Action>
-        </Leading>
-      </Root>,
-    )
-
-    expect(registry?.measurements().leading.fullSwipeAction?.element).toBe(
-      screen.getByRole('button', { name: 'Second' }),
-    )
-    expect(console.warn).not.toHaveBeenCalled()
-
-    rerender(
-      <Root>
-        <RegistryReader onRegistry={(value) => (registry = value)} />
         <Leading>
           <Action fullSwipe onAction={() => undefined}>
             First
@@ -141,9 +158,53 @@ describe('SwipeActions actions and configuration', () => {
 
     await waitFor(() => expect(console.warn).toHaveBeenCalledOnce())
     expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /Leading.*more than one enabled.*fullSwipe.*first enabled/i,
+      ),
+    )
+  })
+
+  it('excludes a disabled full-swipe action and warns once when it becomes eligible', async () => {
+    // Catches disabled claimants winning selection or duplicate eligible actions being silent.
+    let registry: RootContextValue | undefined
+    const { rerender } = render(
+      <Root>
+        <RegistryReader onRegistry={(value) => (registry = value)} />
+        <Trailing>
+          <Action disabled fullSwipe onAction={() => undefined}>
+            First
+          </Action>
+          <Action fullSwipe onAction={() => undefined}>
+            Second
+          </Action>
+        </Trailing>
+      </Root>,
+    )
+
+    expect(registry?.measurements().trailing.fullSwipeAction?.element).toBe(
+      screen.getByRole('button', { name: 'Second' }),
+    )
+    expect(console.warn).not.toHaveBeenCalled()
+
+    rerender(
+      <Root>
+        <RegistryReader onRegistry={(value) => (registry = value)} />
+        <Trailing>
+          <Action fullSwipe onAction={() => undefined}>
+            First
+          </Action>
+          <Action fullSwipe onAction={() => undefined}>
+            Second
+          </Action>
+        </Trailing>
+      </Root>,
+    )
+
+    await waitFor(() => expect(console.warn).toHaveBeenCalledOnce())
+    expect(console.warn).toHaveBeenCalledWith(
       expect.stringMatching(/more than one enabled.*fullSwipe.*first enabled/i),
     )
-    expect(registry?.measurements().leading.fullSwipeAction?.element).toBe(
+    expect(registry?.measurements().trailing.fullSwipeAction?.element).toBe(
       screen.getByRole('button', { name: 'First' }),
     )
   })

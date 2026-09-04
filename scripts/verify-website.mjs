@@ -384,8 +384,8 @@ async function verifyOpeningGeometry(page, viewport) {
   for (const testId of [
     'hero-description',
     'install-command',
-    'inbox-demo',
     'canonical-code',
+    'demo-row-1',
   ]) {
     const box = await page.getByTestId(testId).boundingBox()
     assert.ok(box, `${testId} is rendered at ${viewport.width}px`)
@@ -404,19 +404,64 @@ async function verifyOpeningGeometry(page, viewport) {
     )
   }
 
-  const visibleDemoRows = await page
-    .getByTestId('inbox-demo')
-    .locator('[data-demo-row]')
-    .evaluateAll(
-      (rows) =>
-        rows.filter((row) => {
-          const box = row.getBoundingClientRect()
-          return box.width > 0 && box.height > 0
-        }).length,
-    )
+  const demoRows = page.getByTestId('inbox-demo').locator('[data-demo-row]')
+  assert.equal(
+    await demoRows.count(),
+    3,
+    'The complete grouped inbox is present',
+  )
+  const rowLayout = await demoRows.evaluateAll((rows) =>
+    rows.map((row) => {
+      const style = getComputedStyle(row)
+      const box = row.getBoundingClientRect()
+      return {
+        display: style.display,
+        visibility: style.visibility,
+        position: style.position,
+        width: box.width,
+        height: box.height,
+        hasOffsetParent:
+          row instanceof HTMLElement && row.offsetParent !== null,
+      }
+    }),
+  )
   assert.ok(
-    visibleDemoRows >= 1,
-    'Opening viewport contains a usable swipe row',
+    rowLayout.every(
+      (row) =>
+        row.display !== 'none' &&
+        row.visibility === 'visible' &&
+        row.position !== 'absolute' &&
+        row.position !== 'fixed' &&
+        row.width > 0 &&
+        row.height > 0 &&
+        row.hasOffsetParent,
+    ),
+    'All three inbox rows remain visible in normal document flow',
+  )
+
+  const codeMetrics = await page
+    .getByTestId('canonical-code')
+    .locator('pre')
+    .evaluate((code) => ({
+      fontSize: Number.parseFloat(getComputedStyle(code).fontSize),
+      clientWidth: code.clientWidth,
+      scrollWidth: code.scrollWidth,
+    }))
+  assert.ok(
+    codeMetrics.fontSize >= 12,
+    `Canonical code is at least 12px at ${viewport.width}px`,
+  )
+  assert.ok(
+    codeMetrics.scrollWidth <= codeMetrics.clientWidth,
+    `Canonical code has no horizontal overflow at ${viewport.width}px`,
+  )
+  assert.equal(
+    await page
+      .getByTestId('canonical-code')
+      .locator('a[href="#examples"]')
+      .count(),
+    1,
+    'The compact excerpt routes to the full composition documentation',
   )
 }
 

@@ -32,6 +32,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
+    "dev": "npm run build:dist && vite --config website/vite.config.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
@@ -40,10 +41,12 @@
     "test:browser:geometry": "playwright test --config playwright.config.ts test/browser/geometry.spec.ts",
     "test:e2e": "playwright test --config playwright.config.ts",
     "build:dist": "node scripts/check-css-contract.mjs && vite build && tsc --project tsconfig.build.json && node scripts/fix-declaration-imports.mjs && node scripts/copy-styles.mjs && node scripts/check-css-contract.mjs dist/core.css dist/theme.css dist/styles.css",
+    "build:website": "npm run build:dist && vite build --config website/vite.config.ts",
+    "verify:website": "node scripts/verify-website.mjs",
     "test:api": "node scripts/check-public-api.mjs",
     "test:size": "node scripts/check-bundle-size.mjs",
     "test:package": "npm run build:dist && node --test test/package/verify-package.test.mjs",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build:dist && npm run test:api && npm run test:size && npm run test:package",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build:dist && npm run test:api && npm run test:size && npm run test:package && npm run build:website && npm run verify:website",
     "clean": "rm -rf dist coverage"
   },
   "prettier": {

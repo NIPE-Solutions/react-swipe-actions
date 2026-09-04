@@ -9,6 +9,7 @@ import {
 
 export function CoreExamples() {
   const [activity, setActivity] = useState('No action yet')
+  const [customActivity, setCustomActivity] = useState('Waiting for input')
   const report = (message: string) => () => setActivity(message)
 
   return (
@@ -88,6 +89,41 @@ export function CoreExamples() {
             </Action>
           </Trailing>
         </Root>
+      </Example>
+
+      <Example
+        title="Custom styling"
+        id="custom-styling"
+        note="Core owns mechanics; the product owns surface, shape, type, and semantic color."
+      >
+        <div className="custom-style-example">
+          <Root
+            className="custom-style-row"
+            aria-label="Custom styled priority action"
+          >
+            <Leading className="custom-style-side">
+              <Action onAction={() => setCustomActivity('Priority raised')}>
+                Raise
+              </Action>
+            </Leading>
+            <Content className="custom-style-content">
+              <span className="custom-style-content__mark" aria-hidden="true">
+                7
+              </span>
+              <span>
+                <strong>Review keyboard model</strong>
+                <small>Interaction spec · today</small>
+              </span>
+            </Content>
+          </Root>
+          <output
+            className="custom-style-output"
+            data-testid="custom-styling-output"
+            aria-live="polite"
+          >
+            {customActivity}
+          </output>
+        </div>
       </Example>
 
       <output className="example-activity" aria-live="polite">

@@ -15,12 +15,13 @@ The production website build exposes:
 It imports `@nipe-solutions/react-swipe-actions` and `core.css` through package
 exports. Every row has one content layer, one leading action, one trailing action,
 and belongs to one `Group`. Each instrumented row uses controlled open state and
-increments a render counter in its component body. Fixture counters are available
-on `window.__swipePerformance__`; no diagnostics are added to package exports.
+increments a committed-render counter in a layout effect. The visible metric
+panel is finalized after measurement and stays synchronized with
+`window.__swipePerformance__`; no diagnostics are added to package exports.
 
 ## Environment and command
 
-Measured at `2026-09-04T16:38:25.754Z` on macOS 14.6.1 (Apple M3 Max,
+Measured at `2026-09-04T16:54:07.491Z` on macOS 14.6.1 (Apple M3 Max,
 arm64), Node 24.20.0, npm 11.19.0, and headless Chromium 145.0.7632.6.
 The viewport was 1440 × 1000.
 
@@ -33,7 +34,7 @@ node scripts/measure-website-performance.mjs
 
 | Metric | 100 rows | 1,000 rows |
 | --- | ---: | ---: |
-| Mount to second post-commit frame | 41.7 ms | 439.1 ms |
+| Mount to second post-commit frame | 39.5 ms | 437.6 ms |
 | Live `ResizeObserver` instances | 500 | 5,000 |
 | Pending rAF callbacks after 250 ms idle | 0 | 0 |
 | Package-attributed window pointer listeners | 0 | 0 |
@@ -68,8 +69,8 @@ count was therefore 2 and the package-attributed count was 0 for both fixtures.
 The run started a temporary page-level rAF sampler immediately before a real
 12-step Playwright mouse drag of 118 px. Sampling continued through the library's
 settle and stopped when the root reached `data-state="open"`. The 100-row trace
-captured 28 deltas (median 8.3 ms, p95 9.1 ms, max 9.3 ms). The 1,000-row trace
-captured 28 deltas (median 8.3 ms, p95 9.1 ms, max 9.2 ms).
+captured 30 deltas (median 8.3 ms, p95 8.6 ms, max 9.3 ms). The 1,000-row trace
+captured 28 deltas (median 8.3 ms, p95 8.5 ms, max 9.2 ms).
 
 Headless Chromium in this environment schedules near an 8.3 ms cadence. These
 numbers describe cadence during the observed drag/settle interval; they do not

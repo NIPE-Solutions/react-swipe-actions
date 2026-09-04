@@ -42,6 +42,7 @@ const approvedExamples = [
   'unequal-actions',
   'both-sides',
   'full-swipe-example',
+  'custom-styling',
   'controlled-state-example',
   'group-example',
   'rtl-example',
@@ -127,21 +128,10 @@ try {
     'Prohibited marketing phrases were rendered',
   )
 
-  for (const testId of [
-    'hero-description',
-    'install-command',
-    'canonical-code',
-    'inbox-demo',
-  ]) {
-    const box = await page.getByTestId(testId).boundingBox()
-    assert.ok(box, `${testId} is rendered`)
-    assert.ok(
-      box.y + box.height <= 1000,
-      `${testId} stays inside the 1,000px opening viewport`,
-    )
-  }
+  await verifyOpeningGeometry(page, { width: 1440, height: 1000 })
 
   await verifyPrimaryDemo(page)
+  await verifyCustomStyling(page)
 
   const accessibility = await new AxeBuilder({ page }).analyze()
   assert.deepEqual(
@@ -155,11 +145,18 @@ try {
   )
   await desktopContext.close()
 
-  const mobileContext = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-  })
+  const tabletViewport = { width: 1024, height: 768 }
+  const tabletContext = await browser.newContext({ viewport: tabletViewport })
+  const tablet = await tabletContext.newPage()
+  await tablet.goto(baseUrl, { waitUntil: 'networkidle' })
+  await verifyOpeningGeometry(tablet, tabletViewport)
+  await tabletContext.close()
+
+  const mobileViewport = { width: 390, height: 844 }
+  const mobileContext = await browser.newContext({ viewport: mobileViewport })
   const mobile = await mobileContext.newPage()
   await mobile.goto(baseUrl, { waitUntil: 'networkidle' })
+  await verifyOpeningGeometry(mobile, mobileViewport)
   assert.equal(
     await mobile.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -167,7 +164,20 @@ try {
     true,
     'The website does not overflow a 390px viewport',
   )
+  for (const target of [
+    mobile.locator('.docs-rail nav a').first(),
+    mobile.locator('.install-command button'),
+    mobile.locator('[data-testid="canonical-code"] button'),
+  ]) {
+    const box = await target.boundingBox()
+    assert.ok(
+      box && box.height >= 40,
+      'Compact navigation and copy targets are at least 40px tall',
+    )
+  }
   await mobileContext.close()
+
+  await verifyPerformanceLink(browser, baseUrl)
 
   console.log(
     `Website verified (${approvedSections.length} sections, ${approvedExamples.length} examples, public package imports, desktop/mobile layout, live demo)`,
@@ -269,6 +279,61 @@ async function verifyPrimaryDemo(page) {
     'Opening a grouped row closes its peer',
   )
 
+  const rowTwoSnapshot = await second.evaluate((root) => {
+    const style = getComputedStyle(root)
+    return {
+      offset: Number.parseFloat(
+        style.getPropertyValue('--swipe-actions-offset'),
+      ),
+      progress: Number.parseFloat(
+        style.getPropertyValue('--swipe-actions-progress'),
+      ),
+      state: root.getAttribute('data-state'),
+    }
+  })
+  const visibleSnapshot = {
+    activeRoot: await page.getByTestId('diagnostic-active-root').textContent(),
+    offset: Number.parseFloat(
+      (await page.getByTestId('diagnostic-offset').textContent()) ?? '',
+    ),
+    progress: Number.parseFloat(
+      (await page.getByTestId('diagnostic-progress').textContent()) ?? '',
+    ),
+    velocity: Number.parseFloat(
+      (await page.getByTestId('diagnostic-velocity').textContent()) ?? '',
+    ),
+    owner: await page.getByTestId('diagnostic-owner').textContent(),
+    state: await page.getByTestId('diagnostic-open-state').textContent(),
+  }
+  assert.equal(
+    visibleSnapshot.activeRoot,
+    'Row 2',
+    'Visualizer follows the most recently interacted inbox root',
+  )
+  assert.ok(
+    Math.abs(visibleSnapshot.offset - rowTwoSnapshot.offset) < 0.6,
+    'Visualizer offset comes from the open second row',
+  )
+  assert.ok(
+    Math.abs(visibleSnapshot.progress - rowTwoSnapshot.progress) < 0.011,
+    'Visualizer progress comes from the open second row',
+  )
+  assert.ok(rowTwoSnapshot.progress > 0.95, 'Second row is meaningfully open')
+  assert.ok(
+    Number.isFinite(visibleSnapshot.velocity) && visibleSnapshot.velocity < 0,
+    'Visualizer keeps the second-row pointer velocity',
+  )
+  assert.equal(
+    visibleSnapshot.owner,
+    'swipe',
+    'Visualizer keeps the second-row pointer owner',
+  )
+  assert.equal(
+    visibleSnapshot.state,
+    rowTwoSnapshot.state,
+    'Visualizer open state comes from the open second row',
+  )
+
   const deleteCount = page.getByTestId('demo-delete-count')
   assert.equal(await deleteCount.textContent(), '0')
   await second.press('Escape')
@@ -313,6 +378,141 @@ async function verifyPrimaryDemo(page) {
     focusStyle.outlineOffset < 0,
     'The revealed action focus stroke stays inside the clipped row boundary',
   )
+}
+
+async function verifyOpeningGeometry(page, viewport) {
+  for (const testId of [
+    'hero-description',
+    'install-command',
+    'inbox-demo',
+    'canonical-code',
+  ]) {
+    const box = await page.getByTestId(testId).boundingBox()
+    assert.ok(box, `${testId} is rendered at ${viewport.width}px`)
+    assert.ok(
+      box.x >= 0,
+      `${testId} begins inside the ${viewport.width}px viewport`,
+    )
+    assert.ok(
+      box.x + box.width <= viewport.width + 0.5,
+      `${testId} ends inside the ${viewport.width}px viewport`,
+    )
+    assert.ok(box.y >= 0, `${testId} begins inside the opening viewport`)
+    assert.ok(
+      box.y + box.height <= viewport.height + 0.5,
+      `${testId} stays inside ${viewport.width}×${viewport.height} (bottom ${(box.y + box.height).toFixed(1)}px)`,
+    )
+  }
+
+  const visibleDemoRows = await page
+    .getByTestId('inbox-demo')
+    .locator('[data-demo-row]')
+    .evaluateAll(
+      (rows) =>
+        rows.filter((row) => {
+          const box = row.getBoundingClientRect()
+          return box.width > 0 && box.height > 0
+        }).length,
+    )
+  assert.ok(
+    visibleDemoRows >= 1,
+    'Opening viewport contains a usable swipe row',
+  )
+}
+
+async function verifyCustomStyling(page) {
+  const example = page.locator('[data-example-id="custom-styling"]')
+  await example.scrollIntoViewIfNeeded()
+  const root = example.locator('[data-swipe-actions-root]')
+  const surface = root.locator('[data-swipe-actions-content]')
+  const surfaceStyle = await surface.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      backgroundColor: style.backgroundColor,
+      borderRadius: style.borderRadius,
+    }
+  })
+  assert.notEqual(
+    surfaceStyle.backgroundColor,
+    'rgb(255, 255, 255)',
+    'Custom styling example owns its content surface color',
+  )
+  assert.ok(
+    Number.parseFloat(surfaceStyle.borderRadius) >= 10,
+    'Custom styling example changes the row shape',
+  )
+
+  await drag(root, 100)
+  await root.locator('[data-swipe-actions-action]').click()
+  assert.equal(
+    await page.getByTestId('custom-styling-output').textContent(),
+    'Priority raised',
+    'Custom styling example remains a live package interaction',
+  )
+}
+
+async function verifyPerformanceLink(browser, baseUrl) {
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 1000 },
+  })
+  const page = await context.newPage()
+  await page.goto(baseUrl, { waitUntil: 'networkidle' })
+  const href = await page
+    .getByRole('link', { name: 'Open the 1,000-row fixture' })
+    .getAttribute('href')
+  assert.ok(href, 'Performance fixture query link is rendered')
+  await page.goto(new URL(href, baseUrl).href)
+  await page.locator('body[data-performance-ready]').waitFor()
+  assert.equal(
+    await page.getByRole('heading', { name: '1,000 swipe rows' }).count(),
+    1,
+    'Performance query link renders the fixture',
+  )
+
+  const visible = await page.evaluate(() => ({
+    rows: Number(
+      document.querySelector('[data-testid="performance-row-count"]')
+        ?.textContent,
+    ),
+    mountMs: Number.parseFloat(
+      document.querySelector('[data-testid="performance-mount-ms"]')
+        ?.textContent ?? '',
+    ),
+    resizeObservers: Number(
+      document.querySelector('[data-testid="performance-resize-observers"]')
+        ?.textContent,
+    ),
+    globalPointerListeners: Number(
+      document.querySelector(
+        '[data-testid="performance-global-pointer-listeners"]',
+      )?.textContent,
+    ),
+    pendingFrames: Number(
+      document.querySelector('[data-testid="performance-pending-frames"]')
+        ?.textContent,
+    ),
+    rowRenders: Number(
+      document.querySelector('[data-testid="performance-row-renders"]')
+        ?.textContent,
+    ),
+  }))
+  const backing = await page.evaluate(() => ({
+    ...window.__swipePerformance__,
+  }))
+  assert.equal(visible.rows, 1000)
+  assert.ok(visible.mountMs > 0, 'Visible mount measurement is finalized')
+  assert.ok(
+    Math.abs(visible.mountMs - backing.mountMs) < 0.11,
+    'Visible mount time matches instrumentation',
+  )
+  assert.equal(visible.resizeObservers, backing.resizeObservers)
+  assert.ok(visible.resizeObservers >= 1000, 'Observer count is nonzero')
+  assert.equal(visible.globalPointerListeners, backing.globalPointerListeners)
+  assert.equal(visible.pendingFrames, backing.pendingFrames)
+  assert.equal(visible.pendingFrames, 0, 'No animation frame remains pending')
+  assert.equal(visible.rowRenders, backing.rowRenders)
+  assert.ok(visible.rowRenders >= 1000, 'Visible row render count is nonzero')
+  await context.close()
 }
 
 async function drag(locator, deltaX) {

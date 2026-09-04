@@ -58,10 +58,10 @@ function Website() {
               <span />
               Composable swipe actions for React
             </p>
-            <h1>Rows that feel native. State that stays yours.</h1>
+            <h1>Native swipe. State that stays yours.</h1>
             <p className="intro__lede">
-              Accessible leading and trailing actions, full-swipe intent, group
-              coordination, and RTL behavior in a small compound-component API.
+              Accessible reveal, full swipe, grouping, keyboard control, and RTL
+              in a small compound-component API.
             </p>
             <div className="intro__links">
               <a href="#quick-start">Start with the code</a>

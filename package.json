@@ -3,6 +3,10 @@
   "version": "0.1.0-alpha.0",
   "description": "Composable swipe actions for React.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nipe-solutions/react-swipe-actions.git"
+  },
   "type": "module",
   "engines": {
     "node": ">=24 <25"
@@ -34,8 +38,11 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
     "test:browser:geometry": "playwright test --config playwright.config.ts test/browser/geometry.spec.ts",
-    "build:dist": "node scripts/check-css-contract.mjs && vite build && tsc --project tsconfig.build.json && node scripts/copy-styles.mjs && node scripts/check-css-contract.mjs dist/core.css dist/theme.css dist/styles.css",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build:dist",
+    "build:dist": "node scripts/check-css-contract.mjs && vite build && tsc --project tsconfig.build.json && node scripts/fix-declaration-imports.mjs && node scripts/copy-styles.mjs && node scripts/check-css-contract.mjs dist/core.css dist/theme.css dist/styles.css",
+    "test:api": "node scripts/check-public-api.mjs",
+    "test:size": "node scripts/check-bundle-size.mjs",
+    "test:package": "npm run build:dist && node --test test/package/verify-package.test.mjs",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build:dist && npm run test:api && npm run test:size && npm run test:package",
     "clean": "rm -rf dist coverage"
   },
   "prettier": {

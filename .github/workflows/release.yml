@@ -16,13 +16,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: npm-nipe-solutions-react-swipe-actions-alpha
   cancel-in-progress: false
 
 jobs:
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    outputs:
+      tarball: ${{ steps.release.outputs.tarball }}
+      channel: ${{ steps.release.outputs.channel }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -40,33 +43,38 @@ jobs:
         run: npx playwright install --with-deps chromium firefox webkit
       - name: Run complete browser suite
         run: npm run test:e2e
-      - name: Verify release readiness
-        run: npm run release:check -- --dry-run
+      - name: Verify and preserve release artifact
+        id: release
+        run: npm run release:check -- --dry-run --output release-artifact
+      - name: Upload verified release artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: npm-package-alpha
+          path: release-artifact
+          if-no-files-found: error
+          retention-days: 3
 
   publish:
     needs: verify
-    if: github.event_name == 'release' || inputs.confirm == true
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.confirm == true)
     environment: release
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 10
     permissions:
-      contents: read
       id-token: write
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
       - name: Set up Node.js for trusted publishing
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: package-lock.json
           registry-url: https://registry.npmjs.org
-      - name: Install dependencies
-        run: npm ci
-      - name: Build package
-        run: npm run build:dist
-      - name: Re-verify release inputs
-        run: npm run release:check -- --dry-run
-      - name: Publish with provenance
-        run: npm publish --provenance --access public --tag alpha
+      - name: Download verified release artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: npm-package-alpha
+          path: release-artifact
+      - name: Verify promoted artifact checksum
+        working-directory: release-artifact
+        run: sha512sum --check --strict "${{ needs.verify.outputs.tarball }}.sha512"
+      - name: Publish verified artifact with provenance
+        run: npm publish "release-artifact/${{ needs.verify.outputs.tarball }}" --ignore-scripts --provenance --access public --tag "${{ needs.verify.outputs.channel }}"

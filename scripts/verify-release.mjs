@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import console from 'node:console'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import {
+  appendFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
@@ -30,6 +38,9 @@ export function validateReleaseMetadata(packageJson, changelog) {
     `Package version ${packageJson.version} must be a semantic prerelease`,
   )
   const channel = match[4].split('.')[0]
+  if (match[1] === '0' && match[2] === '1') {
+    assert.equal(channel, 'alpha', '0.1 prereleases must use the alpha channel')
+  }
   assert.match(
     changelog,
     new RegExp(
@@ -141,7 +152,39 @@ export function assertRegistryVersionAbsent(publishedVersion, version) {
   )
 }
 
-export async function verifyRelease({ dryRun = false } = {}) {
+export function parseArguments(args) {
+  assert.equal(
+    args[0],
+    '--dry-run',
+    'Usage: verify-release.mjs --dry-run [--output directory]',
+  )
+  if (args.length === 1) return { dryRun: true, outputDirectory: undefined }
+  assert.equal(
+    args.length,
+    3,
+    'Usage: verify-release.mjs --dry-run [--output directory]',
+  )
+  assert.equal(
+    args[1],
+    '--output',
+    'Usage: verify-release.mjs --dry-run [--output directory]',
+  )
+  assert.ok(args[2], 'Release output directory must not be empty')
+  return { dryRun: true, outputDirectory: args[2] }
+}
+
+export async function writeArtifactChecksum(tarballPath) {
+  const digest = createHash('sha512')
+    .update(await readFile(tarballPath))
+    .digest('hex')
+  const checksumPath = `${tarballPath}.sha512`
+  await writeFile(checksumPath, `${digest}  ${path.basename(tarballPath)}\n`, {
+    flag: 'wx',
+  })
+  return { digest, checksumPath }
+}
+
+export async function verifyRelease({ dryRun = false, outputDirectory } = {}) {
   assert.equal(dryRun, true, 'Release verification requires --dry-run')
 
   const packageJson = JSON.parse(
@@ -194,9 +237,11 @@ export async function verifyRelease({ dryRun = false } = {}) {
   await runVisible('npm', ['run', 'test:size'])
   await runVisible('npm', ['run', 'test:package'])
 
-  const packDirectory = await mkdtemp(
-    path.join(tmpdir(), 'react-swipe-actions-release-'),
-  )
+  const packDirectory = outputDirectory
+    ? path.resolve(repositoryRoot, outputDirectory)
+    : await mkdtemp(path.join(tmpdir(), 'react-swipe-actions-release-'))
+  if (outputDirectory) await mkdir(packDirectory)
+
   try {
     const { stdout } = await run('npm', [
       'pack',
@@ -206,6 +251,14 @@ export async function verifyRelease({ dryRun = false } = {}) {
     ])
     const [pack] = JSON.parse(stdout)
     assert.ok(pack, 'npm pack did not report an artifact')
+    const expectedFilename = `${release.name
+      .replace(/^@/, '')
+      .replaceAll('/', '-')}-${release.version}.tgz`
+    assert.equal(
+      pack.filename,
+      expectedFilename,
+      'npm pack returned an unexpected artifact filename',
+    )
     validatePackedFiles(
       pack.files.map(({ path: file }) => file),
       expectedFiles,
@@ -214,6 +267,8 @@ export async function verifyRelease({ dryRun = false } = {}) {
       `Artifact inventory verified (${pack.entryCount} files, ${pack.size} bytes)`,
     )
 
+    const tarballPath = path.join(packDirectory, pack.filename)
+    const checksum = await writeArtifactChecksum(tarballPath)
     await runVisible('npm', [
       'publish',
       '--dry-run',
@@ -223,10 +278,21 @@ export async function verifyRelease({ dryRun = false } = {}) {
       'public',
       '--tag',
       release.channel,
-      path.join(packDirectory, pack.filename),
+      tarballPath,
     ])
+
+    if (outputDirectory) {
+      await writeGitHubOutputs({
+        tarball: pack.filename,
+        channel: release.channel,
+      })
+      console.log(`Verified artifact preserved at ${tarballPath}`)
+      console.log(`SHA-512: ${checksum.digest}`)
+    }
   } finally {
-    await rm(packDirectory, { recursive: true, force: true })
+    if (!outputDirectory) {
+      await rm(packDirectory, { recursive: true, force: true })
+    }
   }
 
   const publishedVersion = await readRegistryVersion(
@@ -236,6 +302,14 @@ export async function verifyRelease({ dryRun = false } = {}) {
   assertRegistryVersionAbsent(publishedVersion, release.version)
   console.log(`Registry version is available: ${release.version}`)
   console.log('Release dry-run verification passed; nothing was published')
+}
+
+async function writeGitHubOutputs(outputs) {
+  if (!process.env.GITHUB_OUTPUT) return
+  const lines = Object.entries(outputs)
+    .map(([name, value]) => `${name}=${value}`)
+    .join('\n')
+  await appendFile(process.env.GITHUB_OUTPUT, `${lines}\n`)
 }
 
 async function readRegistryVersion(name, version) {
@@ -284,9 +358,7 @@ const isMain =
 
 if (isMain) {
   try {
-    const args = process.argv.slice(2)
-    assert.deepEqual(args, ['--dry-run'], 'Usage: verify-release.mjs --dry-run')
-    await verifyRelease({ dryRun: true })
+    await verifyRelease(parseArguments(process.argv.slice(2)))
   } catch (error) {
     console.error(error instanceof Error ? error.message : error)
     process.exitCode = 1

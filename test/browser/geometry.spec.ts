@@ -88,9 +88,10 @@ test('an actual action-only resize cancels a live pre-arm expansion', async ({
 
   await resize.focus()
   await page.keyboard.press('Enter')
-  await page.mouse.up()
 
+  await expect(action).toHaveCSS('width', '120px')
   await expect(root).toHaveAttribute('data-state', 'closed')
   await expect(action).not.toHaveAttribute('data-full-swipe-expanding')
   expect(await side.boundingBox()).toEqual(naturalSideBox)
+  await page.mouse.up()
 })

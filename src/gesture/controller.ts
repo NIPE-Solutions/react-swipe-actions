@@ -18,6 +18,7 @@ export type GesturePhase =
 export interface GesturePointerEvent {
   pointerId: number
   pointerType: string
+  isTrusted?: boolean
   isPrimary: boolean
   button: number
   clientX: number
@@ -69,6 +70,8 @@ export interface GestureController {
 
 interface PointerSession {
   pointerId: number
+  pointerType: string
+  pointerIsTrusted: boolean
   surface: HTMLElement
   startX: number
   startY: number
@@ -340,6 +343,8 @@ export function createGestureController(
       options.setArmedSide(null)
       session = {
         pointerId: event.pointerId,
+        pointerType: event.pointerType,
+        pointerIsTrusted: event.isTrusted === true,
         surface: event.currentTarget,
         startX: event.clientX,
         startY: event.clientY,
@@ -392,11 +397,15 @@ export function createGestureController(
           { x: active.startX, t: active.startTime },
           { x: event.clientX, t: event.timeStamp },
         ]
-        try {
-          active.surface.setPointerCapture?.(active.pointerId)
-          active.captured = true
-        } catch {
-          active.captured = false
+        // Direct-touch pointers already have implicit capture. Recapturing a
+        // trusted touch can emit a spurious lostpointercapture mid-gesture.
+        if (active.pointerType !== 'touch' || !active.pointerIsTrusted) {
+          try {
+            active.surface.setPointerCapture?.(active.pointerId)
+            active.captured = true
+          } catch {
+            active.captured = false
+          }
         }
         options.setPhase('dragging')
       } else {

@@ -110,9 +110,10 @@ export function useGestureDiagnostics(hostRef: RefObject<HTMLElement | null>) {
       for (const record of records) {
         const root = rootForTarget(record.target)
         if (root === null) continue
-        if (root === activeRoot || root.dataset.state !== 'closed') {
-          selectRoot(root)
-        }
+        // Group handoff intentionally overlaps the closing and opening rows.
+        // Mutation order must not steal the diagnostic selection from the row
+        // chosen by pointer or focus intent.
+        if (root === activeRoot) break
       }
       read()
     })

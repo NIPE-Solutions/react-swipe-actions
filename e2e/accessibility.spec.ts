@@ -181,15 +181,46 @@ test('1000-row group handoff closes continuously without idle listeners', async 
   await first.focus()
   await page.keyboard.press('ArrowLeft')
   await expect(first).toHaveAttribute('data-state', 'open')
+  await first.evaluate((root) => {
+    const element = root as HTMLElement & {
+      __handoffObserver?: MutationObserver
+      __handoffSamples?: Array<{ offset: number; state: string | null }>
+    }
+    element.__handoffSamples = []
+    element.__handoffObserver = new MutationObserver(() => {
+      element.__handoffSamples?.push({
+        offset:
+          Number.parseFloat(
+            element.style.getPropertyValue('--swipe-actions-offset'),
+          ) || 0,
+        state: element.getAttribute('data-state'),
+      })
+    })
+    element.__handoffObserver.observe(element, {
+      attributes: true,
+      attributeFilter: ['data-state', 'style'],
+    })
+  })
   await second.focus()
   await page.keyboard.press('ArrowLeft')
 
-  const handoffOffset = await offset(first)
-  expect(handoffOffset).toBeGreaterThan(0)
-  expect(handoffOffset).toBeLessThanOrEqual(72)
-  await expect(first).toHaveAttribute('data-state', 'settling')
   await expect(first).toHaveAttribute('data-state', 'closed')
   await expect(second).toHaveAttribute('data-state', 'open')
+  const handoffSamples = await first.evaluate((root) => {
+    const element = root as HTMLElement & {
+      __handoffObserver?: MutationObserver
+      __handoffSamples?: Array<{ offset: number; state: string | null }>
+    }
+    element.__handoffObserver?.disconnect()
+    return element.__handoffSamples ?? []
+  })
+  expect(
+    handoffSamples.some(
+      ({ offset: sampleOffset, state }) =>
+        state === 'settling' && sampleOffset > 0 && sampleOffset <= 72,
+    ),
+  ).toBe(true)
+  expect(handoffSamples.at(-1)).toEqual({ offset: 0, state: 'closed' })
   await expect(page.getByTestId('global-pointer-listener-count')).toHaveText(
     '0',
   )

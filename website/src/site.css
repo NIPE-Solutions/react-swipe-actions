@@ -124,32 +124,10 @@ code {
 }
 
 .wordmark__mark {
-  display: grid;
-  grid-template-columns: repeat(3, 5px);
-  align-items: center;
-  gap: 3px;
+  display: block;
+  flex: 0 0 auto;
   inline-size: 32px;
   block-size: 32px;
-  padding-inline: 5px;
-  border: 2px solid var(--ink);
-  border-radius: 8px;
-}
-
-.wordmark__mark i {
-  display: block;
-  inline-size: 5px;
-  border-radius: 5px;
-  background: var(--signal);
-}
-
-.wordmark__mark i:nth-child(1) {
-  block-size: 8px;
-}
-.wordmark__mark i:nth-child(2) {
-  block-size: 17px;
-}
-.wordmark__mark i:nth-child(3) {
-  block-size: 12px;
 }
 
 .docs-rail nav {

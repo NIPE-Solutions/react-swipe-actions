@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { navigationGroups, siteLinks, siteMetadata } from '../content'
+import { ProjectMark } from './ProjectMark'
 
 export function DocsShell({ children }: { children: ReactNode }) {
   return (
@@ -14,11 +15,7 @@ export function DocsShell({ children }: { children: ReactNode }) {
           href="#introduction"
           aria-label="React Swipe Actions home"
         >
-          <span className="wordmark__mark" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
+          <ProjectMark />
           <span>
             React
             <strong>Swipe Actions</strong>

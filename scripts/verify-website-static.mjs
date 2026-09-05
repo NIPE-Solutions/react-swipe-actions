@@ -200,11 +200,34 @@ async function verifyIdentityAndMetadata() {
     path.join(sourceRoot, 'components', 'DocsShell.tsx'),
     'utf8',
   )
+  const projectMarkFile = path.join(sourceRoot, 'components', 'ProjectMark.tsx')
+  assert.equal(
+    await fileExists(projectMarkFile),
+    true,
+    'Website includes a reusable project icon',
+  )
+  const projectMarkSource = await readFile(projectMarkFile, 'utf8')
+  const faviconSource = await readFile(
+    path.join(websiteRoot, 'public', 'favicon.svg'),
+    'utf8',
+  )
   const contentSource = await readFile(
     path.join(sourceRoot, 'content.ts'),
     'utf8',
   )
   const source = `${mainSource}\n${shellSource}\n${contentSource}`
+  assert.match(
+    shellSource,
+    /<ProjectMark\b/,
+    'Documentation wordmark uses the project icon',
+  )
+  for (const part of ['action', 'content']) {
+    assert.ok(
+      projectMarkSource.includes(`data-mark-part="${part}"`) &&
+        faviconSource.includes(`data-mark-part="${part}"`),
+      `Header and favicon share the ${part} mark geometry`,
+    )
+  }
   assert.match(
     source,
     /Swipe actions that feel native\. State that stays yours\./,

@@ -21,6 +21,10 @@ concurrency:
 
 jobs:
   verify:
+    # alpha.0 was bootstrapped interactively before this trusted publisher
+    # existed. Publishing its GitHub release must not attempt a duplicate npm
+    # publication; every later release follows the verified OIDC path below.
+    if: github.event_name != 'release' || github.event.release.tag_name != 'v0.1.0-alpha.0'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     outputs:
@@ -88,7 +92,7 @@ jobs:
             exit 1
           fi
 
-          expected_tarball="nipe-solutions-react-swipe-actions-0.1.0-alpha.0.tgz"
+          expected_tarball="nipe-solutions-react-swipe-actions-0.1.0-alpha.1.tgz"
           if [[ ! "$RELEASE_TARBALL" =~ ^[A-Za-z0-9._-]+$ ]] || [[ "$RELEASE_TARBALL" != "$expected_tarball" ]]; then
             echo "Unsafe release tarball: expected $expected_tarball" >&2
             exit 1

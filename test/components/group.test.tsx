@@ -215,12 +215,27 @@ describe('Group', () => {
     dispatchPointer(rows.secondContent, 'pointerup', 50, 200)
 
     expect(rows.secondRoot).toHaveAttribute('data-state', 'settling')
-    expect(rows.firstRoot).toHaveAttribute('data-state', 'closed')
-    expect(rows.firstChange).toHaveBeenCalledExactlyOnceWith(null)
+    expect(rows.firstRoot).toHaveAttribute('data-state', 'settling')
+    expect(rows.firstRoot).toHaveStyle('--swipe-actions-offset: 80px')
+    expect(rows.firstChange).not.toHaveBeenCalled()
+
+    frames.advance(60)
+    expect(rows.firstRoot).toHaveAttribute('data-state', 'settling')
+    expect(
+      Number.parseFloat(
+        rows.firstRoot.style.getPropertyValue('--swipe-actions-offset'),
+      ),
+    ).toBeGreaterThan(0)
+    expect(
+      Number.parseFloat(
+        rows.firstRoot.style.getPropertyValue('--swipe-actions-offset'),
+      ),
+    ).toBeLessThan(80)
 
     frames.advance(400)
     await act(() => Promise.resolve())
 
+    expect(rows.firstRoot).toHaveAttribute('data-state', 'closed')
     expect(rows.secondRoot).toHaveAttribute('data-state', 'open')
     expect(rows.secondChange).toHaveBeenCalledExactlyOnceWith('leading')
     expect(rows.firstChange).toHaveBeenCalledTimes(1)
@@ -237,8 +252,8 @@ describe('Group', () => {
     dispatchPointer(rows.secondContent, 'pointerup', 50, 200)
 
     expect(rows.secondRoot).toHaveAttribute('data-state', 'settling')
-    expect(rows.firstRoot).toHaveAttribute('data-state', 'closed')
-    expect(rows.firstChange).toHaveBeenCalledExactlyOnceWith(null)
+    expect(rows.firstRoot).toHaveAttribute('data-state', 'settling')
+    expect(rows.firstChange).not.toHaveBeenCalled()
     expect(rows.secondChange).not.toHaveBeenCalled()
 
     frames.advance(400)
@@ -246,6 +261,7 @@ describe('Group', () => {
 
     expect(rows.secondChange).toHaveBeenCalledExactlyOnceWith('leading')
     expect(rows.secondRoot).toHaveAttribute('data-state', 'closed')
-    expect(rows.firstChange).toHaveBeenCalledTimes(1)
+    expect(rows.firstRoot).toHaveAttribute('data-state', 'closed')
+    expect(rows.firstChange).toHaveBeenCalledExactlyOnceWith(null)
   })
 })

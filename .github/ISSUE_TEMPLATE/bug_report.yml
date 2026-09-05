@@ -13,7 +13,7 @@ body:
     attributes:
       label: Package and React versions
       description: Include the package, react, react-dom, and browser versions.
-      placeholder: '@nipe-solutions/react-swipe-actions 0.1.0-alpha.0; react 19.2.8'
+      placeholder: '@nipe-solutions/react-swipe-actions 0.1.0-alpha.1; react 19.2.8'
     validations:
       required: true
   - type: input

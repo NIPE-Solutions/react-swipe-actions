@@ -3,6 +3,12 @@
 This guide prepares a release; it does not authorize or perform publication.
 Do not run a real `npm publish` from a local machine.
 
+The sole historical exception is `0.1.0-alpha.0`: it was published
+interactively from the exact verified tarball to create the package before npm
+could accept its Trusted Publisher connection. Its GitHub release is excluded
+from publication by an exact immutable tag guard. Do not reuse this bootstrap
+procedure for later versions.
+
 ## Preconditions
 
 - Use Node.js 24 and npm 11.19.0 with a clean, reviewed worktree.
@@ -31,7 +37,7 @@ Build and inspect the exact tarball contents before release automation uses it:
 ```bash
 npm run build:dist
 npm pack --json
-tar -tf nipe-solutions-react-swipe-actions-0.1.0-alpha.0.tgz
+tar -tf nipe-solutions-react-swipe-actions-0.1.0-alpha.1.tgz
 npm publish --dry-run --provenance --access public
 ```
 
@@ -43,9 +49,9 @@ trusted publisher check.
 ## Trusted publishing and provenance
 
 Publication belongs only to the repository's protected GitHub Actions workflow
-at `.github/workflows/release.yml`. Before enabling publication for a release,
-configure npm Trusted Publishing for this package, repository, workflow
-filename, and release environment. The workflow uses an OIDC identity token
+at `.github/workflows/release.yml`. npm Trusted Publishing is configured for
+`NIPE-Solutions/react-swipe-actions`, workflow `release.yml`, and environment
+`release`. The workflow uses an OIDC identity token
 (`id-token: write`), runs the checks and artifact inspection first, and invokes
 `npm publish --provenance --access public` only after approval.
 

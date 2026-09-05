@@ -391,8 +391,10 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
     )
 
     useEffect(() => {
-      return group?.register(groupId, () => requestOpenSide(null))
-    }, [group, groupId, requestOpenSide])
+      return group?.register(groupId, () =>
+        gestureRef.current?.closeFromGroup(),
+      )
+    }, [group, groupId])
 
     useEffect(() => {
       if (openSide !== null) {

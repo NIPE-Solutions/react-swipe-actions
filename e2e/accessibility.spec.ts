@@ -170,11 +170,11 @@ for (const rows of [100, 1000] as const) {
   })
 }
 
-test('performance group coordinates opens without global idle listeners', async ({
+test('1000-row group handoff closes continuously without idle listeners', async ({
   page,
 }) => {
-  // Catches large-list grouping losing coordination or installing window pointer listeners.
-  await gotoFixture(page, 'performance', { rows: '100' })
+  // Catches large-list handoff flashing the prior row closed before it settles.
+  await gotoFixture(page, 'performance', { rows: '1000' })
   const first = page.getByTestId('performance-row').nth(0)
   const second = page.getByTestId('performance-row').nth(1)
 
@@ -184,6 +184,10 @@ test('performance group coordinates opens without global idle listeners', async 
   await second.focus()
   await page.keyboard.press('ArrowLeft')
 
+  const handoffOffset = await offset(first)
+  expect(handoffOffset).toBeGreaterThan(0)
+  expect(handoffOffset).toBeLessThanOrEqual(72)
+  await expect(first).toHaveAttribute('data-state', 'settling')
   await expect(first).toHaveAttribute('data-state', 'closed')
   await expect(second).toHaveAttribute('data-state', 'open')
   await expect(page.getByTestId('global-pointer-listener-count')).toHaveText(

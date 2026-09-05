@@ -2,6 +2,19 @@
 
 All notable changes are documented in this file.
 
+## [0.1.0-alpha.1] - 2026-09-05
+
+### Fixed
+
+- Settle a previously open grouped row continuously from its current visual
+  offset before committing the closed state, preventing handoff snaps and
+  large-list flashes.
+
+### Verified
+
+- Added unit and Chromium, Firefox, and WebKit regressions for continuous Group
+  handoff, including the 1,000-row performance fixture.
+
 ## [0.1.0-alpha.0] - 2026-09-05
 
 ### Added

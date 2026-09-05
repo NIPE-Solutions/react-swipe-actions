@@ -66,6 +66,7 @@ export interface GestureController {
   onPointerCancel(event: GesturePointerEvent): void
   onLostPointerCapture(event: GesturePointerEvent): void
   onClickCapture(event: GestureClickEvent): boolean
+  closeFromGroup(): void
   cancel(reason: string): void
 }
 
@@ -339,6 +340,35 @@ export function createGestureController(
   }
 
   return {
+    closeFromGroup() {
+      const active = session
+      clearDragFrame()
+      session = null
+      removeBlurListener()
+      if (active !== null) {
+        releaseCapture(active)
+      }
+      clearSuppression()
+      options.motion.cancel()
+      setArmedSide(null)
+
+      if (options.getOpenSide() === null && options.motion.readOffset() === 0) {
+        options.setPhase('closed')
+        return
+      }
+
+      const generation = ++settleGeneration
+      options.setPhase('settling')
+      void options.motion.settle(0, 0).then((result) => {
+        if (result.status !== 'completed' || generation !== settleGeneration) {
+          return
+        }
+
+        const authoritativeSide = options.requestOpenSide(null)
+        options.motion.writeOffset(offsetForSide(authoritativeSide))
+        options.setPhase(authoritativeSide === null ? 'closed' : 'open')
+      })
+    },
     onPointerDown(event) {
       if (session !== null) {
         if (event.pointerId !== session.pointerId) {

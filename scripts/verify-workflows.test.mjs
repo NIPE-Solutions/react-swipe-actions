@@ -135,6 +135,11 @@ function validateReleaseWorkflow(workflow) {
   const publish = workflow.jobs.publish
   assert.ok(verify)
   assert.ok(publish)
+  assert.equal(
+    verify.if,
+    "github.event_name != 'release' || github.event.release.tag_name != 'v0.1.0-alpha.0'",
+    'only the already-published bootstrap tag may bypass release verification',
+  )
   assert.equal(verify.permissions, undefined)
   assert.deepEqual(publish.permissions, { 'id-token': 'write' })
   assert.equal(publish.needs, 'verify')
@@ -222,7 +227,7 @@ function validateReleaseWorkflow(workflow) {
   assert.match(protectedStep.run, /RELEASE_CHANNEL.*alpha/)
   assert.match(
     protectedStep.run,
-    /nipe-solutions-react-swipe-actions-0\.1\.0-alpha\.0\.tgz/,
+    /nipe-solutions-react-swipe-actions-0\.1\.0-alpha\.1\.tgz/,
   )
   assert.match(protectedStep.run, /\^\[A-Za-z0-9\._-\]\+\$/)
   assert.match(protectedStep.run, /exactly one entry/)
@@ -654,7 +659,7 @@ test('protected release shell treats output mutation payloads only as data', asy
         env: {
           ...process.env,
           RELEASE_TARBALL:
-            'nipe-solutions-react-swipe-actions-0.1.0-alpha.0.tgz',
+            'nipe-solutions-react-swipe-actions-0.1.0-alpha.1.tgz',
           RELEASE_CHANNEL: 'alpha\n$(touch injection-ran)',
         },
       }),
@@ -673,7 +678,7 @@ test('protected release shell rejects extra or mismatched checksum entries', asy
   const protectedStep = workflow.jobs.publish.steps.at(-1)
   const directory = await mkdtemp(path.join(tmpdir(), 'release-manifest-test-'))
   const artifactDirectory = path.join(directory, 'release-artifact')
-  const tarball = 'nipe-solutions-react-swipe-actions-0.1.0-alpha.0.tgz'
+  const tarball = 'nipe-solutions-react-swipe-actions-0.1.0-alpha.1.tgz'
   const digest =
     'ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f'
 

@@ -227,6 +227,13 @@ test('opening a grouped row closes the previously open row', async ({
     holdMs: 120,
   })
 
+  const closingOffset = await offset(page.getByTestId('row-1'))
+  expect(closingOffset).toBeGreaterThan(0)
+  expect(closingOffset).toBeLessThanOrEqual(160)
+  await expect(page.getByTestId('row-1')).toHaveAttribute(
+    'data-state',
+    'settling',
+  )
   await expectClosed(page.getByTestId('row-1'))
   await expectOpen(page.getByTestId('row-2'), -144)
 })

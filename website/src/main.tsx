@@ -388,6 +388,12 @@ function Website() {
             </tr>
             <tr>
               <td>
+                <code>--swipe-actions-action-progress</code>
+              </td>
+              <td>Reveal progress for each individual action.</td>
+            </tr>
+            <tr>
+              <td>
                 <code>--swipe-actions-action-width</code>
               </td>
               <td>Measured width written on each action.</td>

@@ -164,6 +164,10 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         contentWidth: firstValue(contentRegistrationsRef.current)?.width ?? 0,
         leading: {
           width: leadingContainer?.width ?? 0,
+          actions: actionsForContainer(
+            actionRegistrationsRef.current.leading,
+            leadingContainerId,
+          ),
           fullSwipeAction:
             findEligibleAction(
               actionRegistrationsRef.current.leading,
@@ -172,6 +176,10 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         },
         trailing: {
           width: trailingContainer?.width ?? 0,
+          actions: actionsForContainer(
+            actionRegistrationsRef.current.trailing,
+            trailingContainerId,
+          ),
           fullSwipeAction:
             findEligibleAction(
               actionRegistrationsRef.current.trailing,
@@ -676,6 +684,19 @@ function findEligibleAction(
   return undefined
 }
 
+function actionsForContainer(
+  actions: Map<symbol, RegisteredActionEntry>,
+  containerId: symbol | undefined,
+) {
+  if (containerId === undefined) {
+    return []
+  }
+
+  return [...actions.values()]
+    .filter((entry) => entry.containerId === containerId)
+    .map((entry) => entry.action)
+}
+
 function validThresholds(openThreshold: number, fullSwipeThreshold: number) {
   return (
     Number.isFinite(openThreshold) &&
@@ -735,6 +756,36 @@ function createRootMotionAdapter(
       '--swipe-actions-full-swipe-progress',
       String(progress),
     )
+  }
+
+  const writeActionProgress = (
+    snapshot: MeasurementSnapshot,
+    activeSide: SwipeActionsSide | null,
+  ) => {
+    const revealedWidth = Math.abs(offset)
+
+    for (const side of ['leading', 'trailing'] as const) {
+      const actions =
+        side === 'leading'
+          ? snapshot[side].actions
+          : [...snapshot[side].actions].reverse()
+      let precedingWidth = 0
+
+      for (const action of actions) {
+        const progress =
+          side === activeSide && action.width > 0
+            ? Math.min(
+                1,
+                Math.max(0, (revealedWidth - precedingWidth) / action.width),
+              )
+            : 0
+        action.element?.style.setProperty(
+          '--swipe-actions-action-progress',
+          String(progress),
+        )
+        precedingWidth += action.width
+      }
+    }
   }
 
   const clearFullSwipeExpansion = () => {
@@ -845,6 +896,7 @@ function createRootMotionAdapter(
     if (content !== null) {
       content.style.transform = `translate3d(${offset}px, 0, 0)`
     }
+    writeActionProgress(snapshot, activeSide)
     writeFullSwipeExpansion(snapshot, activeSide)
     writeArmedAction()
   }

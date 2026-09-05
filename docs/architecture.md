@@ -219,6 +219,8 @@ Stable hooks are documented CSS variables and attributes, not class names:
 - `--swipe-actions-leading-progress`
 - `--swipe-actions-trailing-progress`
 - `--swipe-actions-action-width` on each measured action
+- `--swipe-actions-action-progress` on each action, clamped to 0–1 for the
+  portion of that individual action uncovered from its logical edge
 - `--swipe-actions-full-swipe-width` and
   `--swipe-actions-full-swipe-progress` on the claimant
 - `data-state`, `data-side`, `data-revealing-side`, `data-active`

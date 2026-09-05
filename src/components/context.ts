@@ -64,6 +64,7 @@ export interface RegisteredActionEntry {
 
 export interface SideMeasurementSnapshot {
   width: number
+  actions: RegisteredAction[]
   fullSwipeAction: RegisteredAction | null
 }
 

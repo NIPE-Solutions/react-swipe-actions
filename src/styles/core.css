@@ -22,6 +22,10 @@
   pointer-events: none;
 }
 
+[data-swipe-actions-root] [data-swipe-actions-action] {
+  --swipe-actions-action-progress: 0;
+}
+
 [data-swipe-actions-root] [data-swipe-actions-side][data-side='leading'] {
   inset-inline-start: 0;
 }

@@ -37,7 +37,7 @@ Build and inspect the exact tarball contents before release automation uses it:
 ```bash
 npm run build:dist
 npm pack --json
-tar -tf nipe-solutions-react-swipe-actions-0.1.0-alpha.1.tgz
+tar -tf nipe-solutions-react-swipe-actions-0.1.0-alpha.2.tgz
 npm publish --dry-run --provenance --access public
 ```
 

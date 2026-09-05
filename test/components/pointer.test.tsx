@@ -152,6 +152,94 @@ describe('SwipeActions pointer gestures', () => {
 
   afterEach(() => vi.unstubAllGlobals())
 
+  it('reports reveal progress independently for actions at different depths', async () => {
+    // Catches a deeper action appearing at the side's already-advanced opacity.
+    const rendered = render(
+      <Root data-testid="progress-root">
+        <Leading data-testid="progress-leading">
+          <Action data-testid="edge-action" onAction={() => undefined}>
+            Edge
+          </Action>
+          <Action data-testid="deep-action" onAction={() => undefined}>
+            Deep
+          </Action>
+        </Leading>
+        <Content data-testid="progress-content">Message</Content>
+        <Trailing data-testid="progress-trailing">
+          <Action data-testid="trailing-deep-action" onAction={() => undefined}>
+            Deep trailing
+          </Action>
+          <Action data-testid="trailing-edge-action" onAction={() => undefined}>
+            Edge trailing
+          </Action>
+        </Trailing>
+      </Root>,
+    )
+    const content = rendered.getByTestId('progress-content')
+    Object.assign(content, {
+      setPointerCapture: vi.fn(),
+      releasePointerCapture: vi.fn(),
+      hasPointerCapture: () => true,
+    })
+    act(() => {
+      resizeObserverMock.emit(content, 320)
+      resizeObserverMock.emit(rendered.getByTestId('progress-leading'), 100)
+      resizeObserverMock.emit(rendered.getByTestId('edge-action'), 40)
+      resizeObserverMock.emit(rendered.getByTestId('deep-action'), 60)
+      resizeObserverMock.emit(rendered.getByTestId('progress-trailing'), 100)
+      resizeObserverMock.emit(rendered.getByTestId('trailing-deep-action'), 60)
+      resizeObserverMock.emit(rendered.getByTestId('trailing-edge-action'), 40)
+    })
+    await act(() => Promise.resolve())
+
+    dispatchPointer(content, 'pointerdown', {
+      clientX: 0,
+      clientY: 0,
+      timeStamp: 0,
+    })
+    dispatchPointer(content, 'pointermove', {
+      clientX: 20,
+      clientY: 0,
+      timeStamp: 16,
+    })
+    frames.advance(16)
+
+    expect(rendered.getByTestId('edge-action')).toHaveStyle(
+      '--swipe-actions-action-progress: 0.5',
+    )
+    expect(rendered.getByTestId('deep-action')).toHaveStyle(
+      '--swipe-actions-action-progress: 0',
+    )
+
+    dispatchPointer(content, 'pointermove', {
+      clientX: 70,
+      clientY: 0,
+      timeStamp: 32,
+    })
+    frames.advance(16)
+
+    expect(rendered.getByTestId('edge-action')).toHaveStyle(
+      '--swipe-actions-action-progress: 1',
+    )
+    expect(rendered.getByTestId('deep-action')).toHaveStyle(
+      '--swipe-actions-action-progress: 0.5',
+    )
+
+    dispatchPointer(content, 'pointermove', {
+      clientX: -20,
+      clientY: 0,
+      timeStamp: 48,
+    })
+    frames.advance(16)
+
+    expect(rendered.getByTestId('trailing-edge-action')).toHaveStyle(
+      '--swipe-actions-action-progress: 0.5',
+    )
+    expect(rendered.getByTestId('trailing-deep-action')).toHaveStyle(
+      '--swipe-actions-action-progress: 0',
+    )
+  })
+
   it('keeps pointer down pending, then locks horizontal motion to direct frames', async () => {
     // Catches eager capture/default prevention, per-move React state, and axis unlocking.
     const row = await renderRow()

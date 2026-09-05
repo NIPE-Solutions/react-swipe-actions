@@ -2,6 +2,26 @@
 
 All notable changes are documented in this file.
 
+## [0.1.0-alpha.2] - 2026-09-05
+
+### Fixed
+
+- Expose per-action reveal progress so actions deeper in a multi-action side can
+  enter continuously instead of appearing at an already-advanced side opacity.
+- Keep the 1,000-row mechanics fixture free of decorative opacity, preventing
+  its first action reveal from reading as a flash.
+
+### Added
+
+- Added the stable `--swipe-actions-action-progress` CSS variable on each
+  action. Values are clamped from 0 to 1 and account for unequal widths and
+  logical edge order on leading and trailing sides.
+
+### Verified
+
+- Added leading and trailing unequal-width action-progress regressions plus
+  optional-theme browser coverage across the supported engines.
+
 ## [0.1.0-alpha.1] - 2026-09-05
 
 ### Fixed

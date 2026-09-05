@@ -17,17 +17,26 @@ test('source styles satisfy the parsed public CSS contract', async () => {
   await validateCssContract(sourcePaths)
 })
 
-test('optional theme reveals action sides continuously from public progress variables', async () => {
+test('optional theme reveals each action continuously from its public progress variable', async () => {
   const theme = await readFile(new URL('theme.css', sourceDirectory), 'utf8')
 
   assert.match(
     theme,
-    /opacity:\s*clamp\([^;]*--swipe-actions-leading-progress[^;]*\)/s,
+    /opacity:\s*clamp\([^;]*--swipe-actions-action-progress[^;]*\)/s,
   )
+})
+
+test('website keeps progressive reveal in the hero and out of the performance fixture', async () => {
+  const site = await readFile(
+    new URL('../website/src/site.css', import.meta.url),
+    'utf8',
+  )
+
   assert.match(
-    theme,
-    /opacity:\s*clamp\([^;]*--swipe-actions-trailing-progress[^;]*\)/s,
+    site,
+    /\.swipe-side\s+\[data-swipe-actions-action\]\s*\{[^}]*opacity:\s*clamp\([^;]*--swipe-actions-action-progress[^;]*\)/s,
   )
+  assert.doesNotMatch(site, /\.example-side[^{}]*\{[^}]*opacity\s*:/s)
 })
 
 test('validator rejects a stylesheet that leaks visuals or an unscoped selector', async () => {

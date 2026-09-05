@@ -596,16 +596,6 @@ main {
   background: #d7e0eb;
 }
 
-.swipe-side[data-side='leading'],
-.example-side[data-side='leading'] {
-  opacity: clamp(0, var(--swipe-actions-leading-progress), 1);
-}
-
-.swipe-side[data-side='trailing'],
-.example-side[data-side='trailing'] {
-  opacity: clamp(0, var(--swipe-actions-trailing-progress), 1);
-}
-
 .swipe-side [data-swipe-actions-action],
 .example-side [data-swipe-actions-action] {
   min-inline-size: 72px;
@@ -625,6 +615,7 @@ main {
   align-items: center;
   justify-content: center;
   gap: 5px;
+  opacity: clamp(0, var(--swipe-actions-action-progress), 1);
 }
 
 .action-icon {

@@ -12,6 +12,7 @@ const REQUIRED_CUSTOM_PROPERTIES = [
   '--swipe-actions-leading-progress',
   '--swipe-actions-trailing-progress',
   '--swipe-actions-action-width',
+  '--swipe-actions-action-progress',
 ]
 const REQUIRED_SELECTOR_FRAGMENTS = [
   '[data-swipe-actions-root]',

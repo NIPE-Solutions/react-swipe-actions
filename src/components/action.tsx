@@ -8,6 +8,7 @@ import { useElementMeasurement, useForwardedElementRef } from './measurement'
 
 type SwipeActionStyle = CSSProperties & {
   '--swipe-actions-action-width'?: string | undefined
+  '--swipe-actions-action-progress'?: string | undefined
 }
 
 export const Action = forwardRef<HTMLButtonElement, SwipeActionsActionProps>(
@@ -107,6 +108,7 @@ export const Action = forwardRef<HTMLButtonElement, SwipeActionsActionProps>(
       ...style,
       '--swipe-actions-action-width':
         measuredWidth === null ? undefined : `${measuredWidth}px`,
+      '--swipe-actions-action-progress': '0',
     }
 
     return (

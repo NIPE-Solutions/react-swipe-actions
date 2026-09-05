@@ -227,7 +227,7 @@ function validateReleaseWorkflow(workflow) {
   assert.match(protectedStep.run, /RELEASE_CHANNEL.*alpha/)
   assert.match(
     protectedStep.run,
-    /nipe-solutions-react-swipe-actions-0\.1\.0-alpha\.1\.tgz/,
+    /nipe-solutions-react-swipe-actions-0\.1\.0-alpha\.2\.tgz/,
   )
   assert.match(protectedStep.run, /\^\[A-Za-z0-9\._-\]\+\$/)
   assert.match(protectedStep.run, /exactly one entry/)
@@ -571,7 +571,7 @@ test('GitHub release verification rejects dirty or mismatched refs', async () =>
     () =>
       validateRepositoryContext({
         ...releaseContext,
-        refName: 'v0.1.0-alpha.1',
+        refName: 'v0.1.0-alpha.2',
       }),
     /must match package version/,
   )
@@ -659,7 +659,7 @@ test('protected release shell treats output mutation payloads only as data', asy
         env: {
           ...process.env,
           RELEASE_TARBALL:
-            'nipe-solutions-react-swipe-actions-0.1.0-alpha.1.tgz',
+            'nipe-solutions-react-swipe-actions-0.1.0-alpha.2.tgz',
           RELEASE_CHANNEL: 'alpha\n$(touch injection-ran)',
         },
       }),
@@ -678,7 +678,7 @@ test('protected release shell rejects extra or mismatched checksum entries', asy
   const protectedStep = workflow.jobs.publish.steps.at(-1)
   const directory = await mkdtemp(path.join(tmpdir(), 'release-manifest-test-'))
   const artifactDirectory = path.join(directory, 'release-artifact')
-  const tarball = 'nipe-solutions-react-swipe-actions-0.1.0-alpha.1.tgz'
+  const tarball = 'nipe-solutions-react-swipe-actions-0.1.0-alpha.2.tgz'
   const digest =
     'ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f'
 

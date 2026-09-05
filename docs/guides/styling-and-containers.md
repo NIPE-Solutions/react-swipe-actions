@@ -61,6 +61,11 @@ The root exposes offset and reveal progress:
 - `--swipe-actions-full-swipe-width` on the active claimant
 - `--swipe-actions-full-swipe-progress` on the active claimant
 
+The optional theme uses the logical leading and trailing progress variables to
+fade each action side in continuously. Headless consumers can use the same
+variables for their own reveal treatment; keep it tied directly to progress so
+dragging and settling remain visually continuous.
+
 The active full-swipe claimant also receives expansion width/progress variables.
 These are useful for color or label emphasis tied directly to the gesture. Avoid
 running a permanent animation loop to read them; computed style can be sampled in

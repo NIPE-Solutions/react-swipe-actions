@@ -39,6 +39,26 @@ function createFrameLoop() {
 }
 
 describe('createAnimator', () => {
+  it('returns a short paused drag without an abrupt first-frame jump', () => {
+    const frames = createFrameLoop()
+    let visual = 36
+    const animator = createAnimator({
+      read: () => visual,
+      write: (value) => {
+        visual = value
+      },
+      now: frames.now,
+      requestFrame: frames.requestFrame,
+      cancelFrame: frames.cancelFrame,
+    })
+
+    void animator.animateTo(0, { velocity: 0 })
+    frames.advance(16)
+
+    expect(visual).toBeGreaterThan(30)
+    expect(visual).toBeLessThan(36)
+  })
+
   it('settles monotonically at its target and completes exactly once', async () => {
     // Catches a non-monotonic easing curve or an animation that settles twice.
     const frames = createFrameLoop()

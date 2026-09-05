@@ -12,6 +12,14 @@
   background: #f1f5f9;
 }
 
+[data-swipe-actions-root] [data-swipe-actions-side][data-side='leading'] {
+  opacity: clamp(0, var(--swipe-actions-leading-progress), 1);
+}
+
+[data-swipe-actions-root] [data-swipe-actions-side][data-side='trailing'] {
+  opacity: clamp(0, var(--swipe-actions-trailing-progress), 1);
+}
+
 [data-swipe-actions-root] [data-swipe-actions-action] {
   padding: 0.75rem 1rem;
   border: 0;

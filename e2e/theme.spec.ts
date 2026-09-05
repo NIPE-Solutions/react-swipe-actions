@@ -2,6 +2,35 @@ import { expect, test } from '@playwright/test'
 
 import { beginDrag, offset } from './helpers'
 
+test('optional theme fades a partially revealed action with gesture progress', async ({
+  page,
+}) => {
+  await page.goto('/e2e/theme-app/')
+  await expect(page.getByTestId('fixture-ready')).toHaveText('ready')
+  const root = page.getByTestId('theme-root')
+  const surface = page.getByTestId('theme-content')
+  const side = root.locator('[data-swipe-actions-side][data-side="leading"]')
+
+  await beginDrag(page, surface, 24, 0, 1)
+  await expect(root).toHaveAttribute('data-state', 'dragging')
+  await expect.poll(() => offset(root)).toBeGreaterThan(20)
+  const partialOpacity = Number.parseFloat(
+    await side.evaluate((element) => getComputedStyle(element).opacity),
+  )
+  expect(partialOpacity).toBeGreaterThan(0)
+  expect(partialOpacity).toBeLessThan(1)
+
+  await page.waitForTimeout(140)
+  await page.mouse.up()
+  await expect(root).toHaveAttribute('data-state', 'closed')
+  await expect.poll(() => offset(root)).toBe(0)
+  await expect
+    .poll(() =>
+      side.evaluate((element) => Number(getComputedStyle(element).opacity)),
+    )
+    .toBe(0)
+})
+
 test('combined styles keep direct drag motion at the written coordinate', async ({
   page,
 }) => {

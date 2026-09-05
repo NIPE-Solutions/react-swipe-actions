@@ -220,6 +220,16 @@ test('1000-row group handoff closes continuously without idle listeners', async 
         state === 'settling' && sampleOffset > 0 && sampleOffset <= 72,
     ),
   ).toBe(true)
+  const handoffOffsets = handoffSamples.map(({ offset: sampleOffset }) =>
+    Math.max(0, sampleOffset),
+  )
+  expect(
+    handoffOffsets.every(
+      (sampleOffset, index) =>
+        index === 0 || sampleOffset <= handoffOffsets[index - 1]! + 0.5,
+    ),
+    JSON.stringify(handoffSamples),
+  ).toBe(true)
   expect(handoffSamples.at(-1)).toEqual({ offset: 0, state: 'closed' })
   await expect(page.getByTestId('global-pointer-listener-count')).toHaveText(
     '0',

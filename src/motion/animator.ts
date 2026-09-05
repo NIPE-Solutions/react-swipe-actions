@@ -25,10 +25,13 @@ export interface SwipeAnimator {
   current(): number
 }
 
-const MIN_DURATION = 120
+const MIN_DURATION = 100
+const RESTING_MIN_DURATION = 160
 const MAX_DURATION = 360
 const MAX_VELOCITY = 2.5
 const MIN_SETTLE_VELOCITY = 0.75
+const BASE_NORMALIZED_SLOPE = 1.25
+const MAX_NORMALIZED_SLOPE = 2.75
 
 export function createAnimator({
   read,
@@ -82,7 +85,16 @@ export function createAnimator({
 
           const elapsed = Math.max(0, now() - startedAt)
           const progress = Math.min(1, elapsed / duration)
-          const value = start + (destination - start) * cubicEaseOut(progress)
+          const value =
+            start +
+            (destination - start) *
+              hermiteProgress(
+                progress,
+                start,
+                destination,
+                duration,
+                options.velocity,
+              )
 
           write(value)
 
@@ -118,12 +130,37 @@ function durationFor(
     Math.max(MIN_SETTLE_VELOCITY, towardTarget),
   )
   const unboundedDuration = Math.abs(target - start) / speed
+  const velocityProgress = Math.min(1, towardTarget / 1.5)
+  const minimumDuration =
+    RESTING_MIN_DURATION -
+    (RESTING_MIN_DURATION - MIN_DURATION) * velocityProgress
 
-  return Math.min(MAX_DURATION, Math.max(MIN_DURATION, unboundedDuration))
+  return Math.min(MAX_DURATION, Math.max(minimumDuration, unboundedDuration))
 }
 
-function cubicEaseOut(progress: number) {
-  return 1 - (1 - progress) ** 3
+function hermiteProgress(
+  progress: number,
+  start: number,
+  target: number,
+  duration: number,
+  velocity: number | undefined,
+) {
+  const distance = Math.abs(target - start)
+  if (distance === 0) return 1
+
+  const direction = Math.sign(target - start)
+  const releaseVelocity = Number.isFinite(velocity) ? (velocity ?? 0) : 0
+  const towardTarget = Math.max(0, direction * releaseVelocity)
+  const averageVelocity = distance / duration
+  const normalizedSlope = Math.min(
+    MAX_NORMALIZED_SLOPE,
+    Math.max(BASE_NORMALIZED_SLOPE, towardTarget / averageVelocity),
+  )
+  const squared = progress * progress
+  const cubed = squared * progress
+  const smoothTarget = -2 * cubed + 3 * squared
+  const initialVelocity = cubed - 2 * squared + progress
+  return smoothTarget + normalizedSlope * initialVelocity
 }
 
 function finiteCoordinate(value: number) {

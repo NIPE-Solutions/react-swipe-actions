@@ -14,15 +14,49 @@ import {
 test('a slow partial swipe below threshold settles closed', async ({
   page,
 }) => {
-  // Catches distance-independent opening after a deliberate short drag.
+  // Catches a deliberate short drag jumping to closed on release.
   await gotoFixture(page, 'inbox')
   const root = page.getByTestId('row-1')
+  const surface = page.getByTestId('row-1-drag-surface')
 
-  await drag(page, page.getByTestId('row-1-drag-surface'), 36, {
-    holdMs: 140,
+  await beginDrag(page, surface, 36)
+  await page.waitForTimeout(140)
+  const releaseOffset = await offset(root)
+  await root.evaluate((element) => {
+    const tracked = element as HTMLElement & {
+      __returnObserver?: MutationObserver
+      __returnOffsets?: number[]
+    }
+    tracked.__returnOffsets = []
+    tracked.__returnObserver = new MutationObserver(() => {
+      tracked.__returnOffsets?.push(
+        Number.parseFloat(
+          tracked.style.getPropertyValue('--swipe-actions-offset'),
+        ) || 0,
+      )
+    })
+    tracked.__returnObserver.observe(tracked, {
+      attributes: true,
+      attributeFilter: ['style'],
+    })
   })
+  await page.mouse.up()
 
   await expectClosed(root)
+  const returnOffsets = await root.evaluate((element) => {
+    const tracked = element as HTMLElement & {
+      __returnObserver?: MutationObserver
+      __returnOffsets?: number[]
+    }
+    tracked.__returnObserver?.disconnect()
+    return tracked.__returnOffsets ?? []
+  })
+  const intermediateOffsets = returnOffsets.filter(
+    (sample) => sample > 0 && sample < releaseOffset,
+  )
+  expect(releaseOffset).toBeGreaterThan(30)
+  expect(intermediateOffsets.length).toBeGreaterThan(0)
+  expect(intermediateOffsets[0]).toBeGreaterThan(releaseOffset * 0.75)
 })
 
 test('a distance swipe opens the complete unequal-width leading side', async ({

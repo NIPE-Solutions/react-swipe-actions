@@ -107,6 +107,7 @@ export function createGestureController(
   let suppression: ClickSuppression | null = null
   let blurWindow: Window | null = null
   let armedSide: SwipeActionsSide | null = null
+  let authorityReconcileTimer: ReturnType<typeof setTimeout> | null = null
 
   const setArmedSide = (side: SwipeActionsSide | null) => {
     armedSide = side
@@ -174,6 +175,13 @@ export function createGestureController(
     suppression = null
   }
 
+  const clearAuthorityReconcile = () => {
+    if (authorityReconcileTimer !== null) {
+      clearTimeout(authorityReconcileTimer)
+      authorityReconcileTimer = null
+    }
+  }
+
   const releaseCapture = (active: PointerSession) => {
     if (!active.captured) {
       return
@@ -209,6 +217,7 @@ export function createGestureController(
     const hadWork = session !== null || dragFrame !== null || motionWasActive
     settleGeneration += 1
     clearSuppression()
+    clearAuthorityReconcile()
     setArmedSide(null)
     abandonSession(
       reason !== 'unmount' && (hadWork || reason === 'configuration'),
@@ -364,9 +373,31 @@ export function createGestureController(
           return
         }
 
-        const authoritativeSide = options.requestOpenSide(null)
-        options.motion.writeOffset(offsetForSide(authoritativeSide))
-        options.setPhase(authoritativeSide === null ? 'closed' : 'open')
+        options.requestOpenSide(null)
+        options.motion.writeOffset(0)
+        options.setPhase('closed')
+
+        // Give a controlled parent time to commit the close. If it rejects the
+        // request, animate back to its still-authoritative side instead of
+        // flashing the old offset for one frame.
+        clearAuthorityReconcile()
+        authorityReconcileTimer = setTimeout(() => {
+          authorityReconcileTimer = null
+          if (generation !== settleGeneration) return
+          const authoritativeSide = options.getOpenSide()
+          if (authoritativeSide === null) return
+          options.setPhase('settling')
+          void options.motion
+            .settle(offsetForSide(authoritativeSide), 0)
+            .then((restoreResult) => {
+              if (
+                restoreResult.status === 'completed' &&
+                generation === settleGeneration
+              ) {
+                options.setPhase('open')
+              }
+            })
+        }, 50)
       })
     },
     onPointerDown(event) {
@@ -391,6 +422,7 @@ export function createGestureController(
       }
 
       clearSuppression()
+      clearAuthorityReconcile()
       const startOffset = options.motion.readOffset()
       const interruptedSettle = options.motion.cancel()
       settleGeneration += 1

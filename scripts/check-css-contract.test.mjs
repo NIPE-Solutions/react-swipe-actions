@@ -17,6 +17,19 @@ test('source styles satisfy the parsed public CSS contract', async () => {
   await validateCssContract(sourcePaths)
 })
 
+test('optional theme reveals action sides continuously from public progress variables', async () => {
+  const theme = await readFile(new URL('theme.css', sourceDirectory), 'utf8')
+
+  assert.match(
+    theme,
+    /opacity:\s*clamp\([^;]*--swipe-actions-leading-progress[^;]*\)/s,
+  )
+  assert.match(
+    theme,
+    /opacity:\s*clamp\([^;]*--swipe-actions-trailing-progress[^;]*\)/s,
+  )
+})
+
 test('validator rejects a stylesheet that leaks visuals or an unscoped selector', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'swipe-actions-css-'))
   const temporaryPaths = ['core.css', 'theme.css', 'styles.css'].map((name) =>

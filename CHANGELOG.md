@@ -9,11 +9,16 @@ All notable changes are documented in this file.
 - Settle a previously open grouped row continuously from its current visual
   offset before committing the closed state, preventing handoff snaps and
   large-list flashes.
+- Preserve release continuity with a velocity-aware Hermite settle curve so
+  short partial swipes return without an abrupt first-frame jump.
+- Fade optional-theme action sides directly with reveal progress so actions
+  appear continuously during partial drags and settling motion.
 
 ### Verified
 
 - Added unit and Chromium, Firefox, and WebKit regressions for continuous Group
-  handoff, including the 1,000-row performance fixture.
+  handoff, partial-action reveal, and smooth short-drag returns, including the
+  1,000-row performance fixture.
 
 ## [0.1.0-alpha.0] - 2026-09-05
 

@@ -16,6 +16,10 @@ import { parse } from 'yaml'
 
 const execFileAsync = promisify(execFile)
 const repositoryRoot = path.resolve(import.meta.dirname, '..')
+const packageMetadata = JSON.parse(
+  await readFile(path.join(repositoryRoot, 'package.json'), 'utf8'),
+)
+const releaseTarball = `nipe-solutions-react-swipe-actions-${packageMetadata.version}.tgz`
 
 async function readYaml(relativePath) {
   return parse(await readFile(path.join(repositoryRoot, relativePath), 'utf8'))
@@ -225,10 +229,7 @@ function validateReleaseWorkflow(workflow) {
     'OIDC shell must not interpolate job outputs directly',
   )
   assert.match(protectedStep.run, /RELEASE_CHANNEL.*alpha/)
-  assert.match(
-    protectedStep.run,
-    /nipe-solutions-react-swipe-actions-0\.1\.0-alpha\.2\.tgz/,
-  )
+  assert.ok(protectedStep.run.includes(releaseTarball))
   assert.match(protectedStep.run, /\^\[A-Za-z0-9\._-\]\+\$/)
   assert.match(protectedStep.run, /exactly one entry/)
   assert.match(protectedStep.run, /manifest filename/)
@@ -658,8 +659,7 @@ test('protected release shell treats output mutation payloads only as data', asy
         cwd: directory,
         env: {
           ...process.env,
-          RELEASE_TARBALL:
-            'nipe-solutions-react-swipe-actions-0.1.0-alpha.2.tgz',
+          RELEASE_TARBALL: releaseTarball,
           RELEASE_CHANNEL: 'alpha\n$(touch injection-ran)',
         },
       }),
@@ -678,7 +678,7 @@ test('protected release shell rejects extra or mismatched checksum entries', asy
   const protectedStep = workflow.jobs.publish.steps.at(-1)
   const directory = await mkdtemp(path.join(tmpdir(), 'release-manifest-test-'))
   const artifactDirectory = path.join(directory, 'release-artifact')
-  const tarball = 'nipe-solutions-react-swipe-actions-0.1.0-alpha.2.tgz'
+  const tarball = releaseTarball
   const digest =
     'ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f'
 

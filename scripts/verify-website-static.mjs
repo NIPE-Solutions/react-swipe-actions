@@ -196,6 +196,10 @@ async function verifyIdentityAndMetadata() {
   assert.equal(siteMetadata.reactCompatibility, 'React 18.3 and 19')
 
   const mainSource = await readFile(path.join(sourceRoot, 'main.tsx'), 'utf8')
+  const performanceSource = await readFile(
+    path.join(sourceRoot, 'performance-fixture.tsx'),
+    'utf8',
+  )
   const shellSource = await readFile(
     path.join(sourceRoot, 'components', 'DocsShell.tsx'),
     'utf8',
@@ -232,6 +236,16 @@ async function verifyIdentityAndMetadata() {
     source,
     /Swipe actions that feel native\. State that stays yours\./,
     'Hero describes native feel without claiming a native primitive',
+  )
+  assert.match(
+    performanceSource,
+    /Back to documentation/,
+    'Performance fixture provides a route back to the documentation',
+  )
+  assert.match(
+    performanceSource,
+    /<footer className="performance-fixture__footer">/,
+    'Performance fixture includes a compact project footer',
   )
   for (const destination of [
     'https://github.com/NIPE-Solutions/react-swipe-actions',

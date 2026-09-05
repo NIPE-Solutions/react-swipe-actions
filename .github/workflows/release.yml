@@ -92,7 +92,7 @@ jobs:
             exit 1
           fi
 
-          expected_tarball="nipe-solutions-react-swipe-actions-0.1.0-alpha.2.tgz"
+          expected_tarball="nipe-solutions-react-swipe-actions-0.1.0-alpha.3.tgz"
           if [[ ! "$RELEASE_TARBALL" =~ ^[A-Za-z0-9._-]+$ ]] || [[ "$RELEASE_TARBALL" != "$expected_tarball" ]]; then
             echo "Unsafe release tarball: expected $expected_tarball" >&2
             exit 1

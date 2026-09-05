@@ -260,6 +260,14 @@ describe('Group', () => {
     await act(() => Promise.resolve())
 
     expect(rows.secondChange).toHaveBeenCalledExactlyOnceWith('leading')
+    expect(rows.secondRoot).toHaveAttribute('data-state', 'open')
+    expect(rows.secondRoot).toHaveStyle('--swipe-actions-offset: 80px')
+
+    await act(() => new Promise((resolve) => setTimeout(resolve, 60)))
+    expect(rows.secondRoot).toHaveAttribute('data-state', 'settling')
+    frames.advance(400)
+    await act(() => Promise.resolve())
+
     expect(rows.secondRoot).toHaveAttribute('data-state', 'closed')
     expect(rows.firstRoot).toHaveAttribute('data-state', 'closed')
     expect(rows.firstChange).toHaveBeenCalledExactlyOnceWith(null)

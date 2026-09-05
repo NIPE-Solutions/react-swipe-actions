@@ -706,6 +706,57 @@ async function verifyPerformanceLink(browser, baseUrl) {
   assert.equal(visible.pendingFrames, 0, 'No animation frame remains pending')
   assert.equal(visible.rowRenders, backing.rowRenders)
   assert.ok(visible.rowRenders >= 1000, 'Visible row render count is nonzero')
+
+  const firstRoot = page.locator('[data-performance-row]').first()
+  const firstContent = firstRoot.locator('[data-swipe-actions-content]')
+  await firstRoot.evaluate((root) => {
+    const element = root
+    element.__openingOffsets = []
+    element.__openingObserver = new MutationObserver(() => {
+      element.__openingOffsets.push(
+        Number.parseFloat(
+          element.style.getPropertyValue('--swipe-actions-offset'),
+        ) || 0,
+      )
+    })
+    element.__openingObserver.observe(element, {
+      attributes: true,
+      attributeFilter: ['style'],
+    })
+  })
+  await drag(firstContent, 60)
+  await firstRoot.waitFor({ state: 'visible' })
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-performance-row]')
+        ?.getAttribute('data-state') === 'open',
+  )
+  const openingOffsets = await firstRoot.evaluate((root) => {
+    const element = root
+    element.__openingObserver?.disconnect()
+    return element.__openingOffsets ?? []
+  })
+  const committedIndex = openingOffsets.findIndex((offset) => offset >= 50)
+  assert.notEqual(
+    committedIndex,
+    -1,
+    `Opening trace reaches the revealed side: ${JSON.stringify(openingOffsets)}`,
+  )
+  assert.ok(
+    openingOffsets.slice(committedIndex).every((offset) => offset >= 49),
+    `Controlled opening never flashes back to closed: ${JSON.stringify(openingOffsets)}`,
+  )
+  assert.equal(
+    await page.getByRole('link', { name: 'Back to documentation' }).count(),
+    1,
+    'Performance fixture provides a return route',
+  )
+  assert.equal(
+    await page.locator('.performance-fixture__footer').count(),
+    1,
+    'Performance fixture renders its compact footer',
+  )
   await context.close()
 }
 

@@ -207,7 +207,6 @@ export const Root = forwardRef<SwipeActionsHandle, SwipeActionsRootProps>(
         beginOpening: () => groupRef.current?.notifyOpen(groupId),
         requestOpenSide: (side) => {
           requestOpenSideRef.current(side)
-          return controlledRef.current ? openSideRef.current : side
         },
         setPhase: (phase) => {
           elementRef.current?.setAttribute('data-state', phase)

@@ -8,6 +8,9 @@ import {
   Trailing,
 } from '@nipe-solutions/react-swipe-actions'
 
+import { siteLinks, siteMetadata } from './content'
+import { ProjectMark } from './components/ProjectMark'
+
 interface PerformanceMetrics {
   mountStarted: number
   mountMs: number
@@ -114,6 +117,12 @@ export function PerformanceFixture({ rows }: { rows: 100 | 1000 }) {
 
   return (
     <main className="performance-fixture">
+      <nav className="performance-fixture__nav" aria-label="Fixture navigation">
+        <a href="./">
+          <ProjectMark />
+          <span>Back to documentation</span>
+        </a>
+      </nav>
       <header>
         <h1>{rows.toLocaleString('en-US')} swipe rows</h1>
         <p>
@@ -129,6 +138,14 @@ export function PerformanceFixture({ rows }: { rows: 100 | 1000 }) {
           ))}
         </div>
       </Group>
+      <footer className="performance-fixture__footer">
+        <span>React Swipe Actions · {siteMetadata.statusLabel}</span>
+        <nav aria-label="Fixture footer">
+          <a href="./">Documentation</a>
+          <a href={siteLinks.github}>GitHub</a>
+          <a href={siteLinks.nipeOpenSource}>NIPE Open Source</a>
+        </nav>
+      </footer>
     </main>
   )
 }

@@ -40,8 +40,9 @@ test('combined styles keep direct drag motion at the written coordinate', async 
   const root = page.getByTestId('theme-root')
   const surface = page.getByTestId('theme-content')
 
-  await beginDrag(page, surface, 120, 0, 1)
+  await beginDrag(page, surface, 120)
   await expect(root).toHaveAttribute('data-state', 'dragging')
+  await expect.poll(() => offset(root)).toBeGreaterThan(100)
 
   const motion = await surface.evaluate((element) => {
     const root = element.closest<HTMLElement>('[data-swipe-actions-root]')!
@@ -61,6 +62,5 @@ test('combined styles keep direct drag motion at the written coordinate', async 
   ).not.toContain('transform')
   expect(motion.transitionDuration.split(',')).toEqual(['0s'])
   expect(motion.computedX).toBeCloseTo(motion.writtenOffset, 1)
-  expect(await offset(root)).toBeGreaterThan(100)
   await page.mouse.up()
 })

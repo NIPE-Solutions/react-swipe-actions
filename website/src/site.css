@@ -1267,6 +1267,31 @@ kbd {
   padding-block: 32px 80px;
 }
 
+.performance-fixture__nav {
+  margin-block-end: 28px;
+}
+
+.performance-fixture__nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 680;
+  text-decoration: none;
+}
+
+.performance-fixture__nav .wordmark__mark {
+  inline-size: 28px;
+  block-size: 28px;
+}
+
+.performance-fixture__nav a:hover span,
+.performance-fixture__nav a:focus-visible span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .performance-fixture h1 {
   margin: 0;
   font-size: 28px;
@@ -1301,6 +1326,29 @@ kbd {
 .performance-fixture__list {
   display: grid;
   gap: 1px;
+}
+
+.performance-fixture__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-block-start: 32px;
+  padding-block-start: 18px;
+  border-block-start: 1px solid var(--rule);
+  color: #657287;
+  font-size: 11px;
+}
+
+.performance-fixture__footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.performance-fixture__footer a {
+  color: inherit;
+  text-underline-offset: 3px;
 }
 
 @media (max-width: 1120px) {

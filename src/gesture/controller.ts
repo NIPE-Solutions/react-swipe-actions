@@ -54,7 +54,7 @@ export interface GestureControllerOptions {
   getOpenThreshold(): number
   getFullSwipeThreshold(): number
   beginOpening(side: SwipeActionsSide): void
-  requestOpenSide(side: SwipeActionsOpenSide): SwipeActionsOpenSide
+  requestOpenSide(side: SwipeActionsOpenSide): void
   setPhase(phase: GesturePhase): void
   setArmedSide(side: SwipeActionsSide | null): void
 }
@@ -180,6 +180,32 @@ export function createGestureController(
       clearTimeout(authorityReconcileTimer)
       authorityReconcileTimer = null
     }
+  }
+
+  const reconcileRequestedSide = (
+    generation: number,
+    requestedSide: SwipeActionsOpenSide,
+  ) => {
+    clearAuthorityReconcile()
+    authorityReconcileTimer = setTimeout(() => {
+      authorityReconcileTimer = null
+      if (generation !== settleGeneration) return
+
+      const authoritativeSide = options.getOpenSide()
+      if (authoritativeSide === requestedSide) return
+
+      options.setPhase('settling')
+      void options.motion
+        .settle(offsetForSide(authoritativeSide), 0)
+        .then((result) => {
+          if (
+            result.status === 'completed' &&
+            generation === settleGeneration
+          ) {
+            options.setPhase(authoritativeSide === null ? 'closed' : 'open')
+          }
+        })
+    }, 50)
   }
 
   const releaseCapture = (active: PointerSession) => {
@@ -339,9 +365,10 @@ export function createGestureController(
           return
         }
 
-        const authoritativeSide = options.requestOpenSide(target.side)
-        options.motion.writeOffset(offsetForSide(authoritativeSide))
-        options.setPhase(authoritativeSide === null ? 'closed' : 'open')
+        options.requestOpenSide(target.side)
+        options.motion.writeOffset(offsetForSide(target.side))
+        options.setPhase(target.side === null ? 'closed' : 'open')
+        reconcileRequestedSide(generation, target.side)
       })
     void completion
 
@@ -378,26 +405,8 @@ export function createGestureController(
         options.setPhase('closed')
 
         // Give a controlled parent time to commit the close. If it rejects the
-        // request, animate back to its still-authoritative side instead of
-        // flashing the old offset for one frame.
-        clearAuthorityReconcile()
-        authorityReconcileTimer = setTimeout(() => {
-          authorityReconcileTimer = null
-          if (generation !== settleGeneration) return
-          const authoritativeSide = options.getOpenSide()
-          if (authoritativeSide === null) return
-          options.setPhase('settling')
-          void options.motion
-            .settle(offsetForSide(authoritativeSide), 0)
-            .then((restoreResult) => {
-              if (
-                restoreResult.status === 'completed' &&
-                generation === settleGeneration
-              ) {
-                options.setPhase('open')
-              }
-            })
-        }, 50)
+        // request, animate back to its still-authoritative side.
+        reconcileRequestedSide(generation, null)
       })
     },
     onPointerDown(event) {

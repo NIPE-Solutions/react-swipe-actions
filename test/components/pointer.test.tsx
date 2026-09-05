@@ -753,6 +753,9 @@ describe('SwipeActions pointer gestures', () => {
     })
     frames.advance(400)
     await act(() => Promise.resolve())
+    await act(() => new Promise((resolve) => setTimeout(resolve, 60)))
+    frames.advance(400)
+    await act(() => Promise.resolve())
 
     expect(row.onOpenSideChange).toHaveBeenCalledExactlyOnceWith('leading')
     expect(row.root).toHaveAttribute('data-state', 'closed')
@@ -778,6 +781,9 @@ describe('SwipeActions pointer gestures', () => {
       clientY: 0,
       timeStamp: 200,
     })
+    frames.advance(400)
+    await act(() => Promise.resolve())
+    await act(() => new Promise((resolve) => setTimeout(resolve, 60)))
     frames.advance(400)
     await act(() => Promise.resolve())
 

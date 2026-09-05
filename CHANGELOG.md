@@ -2,6 +2,25 @@
 
 All notable changes are documented in this file.
 
+## [0.1.0-alpha.3] - 2026-09-05
+
+### Fixed
+
+- Preserve the settled visual offset while a controlled parent commits an
+  accepted open-side change, removing the one-frame closed-state flash after a
+  swipe.
+- Reconcile rejected controlled changes after a short authority window and
+  animate back to the authoritative side instead of resetting abruptly.
+- Wait for the browser motion frame in the direct-theme regression so WebKit
+  pointer delivery cannot race its assertion.
+
+### Added
+
+- Add a compact return link and project footer to the standalone 100 and 1,000
+  row performance fixtures.
+- Verify the real 1,000-row controlled opening trace never drops back to zero
+  after reaching its committed reveal.
+
 ## [0.1.0-alpha.2] - 2026-09-05
 
 ### Fixed

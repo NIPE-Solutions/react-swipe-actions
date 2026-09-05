@@ -5,11 +5,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nipe-solutions/react-swipe-actions.git"
+    "url": "https://github.com/NIPE-Solutions/react-swipe-actions"
   },
   "homepage": "https://react-swipe-actions.nipesolutions.com",
   "bugs": {
-    "url": "https://github.com/nipe-solutions/react-swipe-actions/issues"
+    "url": "https://github.com/NIPE-Solutions/react-swipe-actions/issues"
   },
   "publishConfig": {
     "access": "public",

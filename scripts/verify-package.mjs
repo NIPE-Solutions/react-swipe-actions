@@ -33,7 +33,7 @@ const expectedRuntimeExports = [
   'Trailing',
 ]
 const sourceMode = process.argv.includes('--source')
-const repositoryUrl = 'https://github.com/nipe-solutions/react-swipe-actions'
+const repositoryUrl = 'https://github.com/NIPE-Solutions/react-swipe-actions'
 const websiteUrl = 'https://react-swipe-actions.nipesolutions.com'
 const documentationFiles = [
   'README.md',
@@ -146,7 +146,7 @@ try {
     assert.deepEqual(installedPackage.dependencies ?? {}, {})
     assert.deepEqual(installedPackage.repository, {
       type: 'git',
-      url: 'git+https://github.com/nipe-solutions/react-swipe-actions.git',
+      url: 'https://github.com/NIPE-Solutions/react-swipe-actions',
     })
     const installedReact = JSON.parse(
       await readFile(

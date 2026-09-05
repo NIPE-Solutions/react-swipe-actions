@@ -60,7 +60,7 @@ instead of opening a public issue for a vulnerability.
 
 ## Support and triage
 
-Use the [public issue forms](https://github.com/nipe-solutions/react-swipe-actions/issues/new/choose)
+Use the [public issue forms](https://github.com/NIPE-Solutions/react-swipe-actions/issues/new/choose)
 for reproducible defects and focused requests. Maintainers triage reports on a
 best-effort basis; an issue is not a support-service agreement. Include the
 requested environment and interaction evidence so another contributor can

@@ -439,7 +439,7 @@ test('release metadata requires the approved prerelease identity and provenance'
     version: '0.1.0-alpha.0',
     repository: {
       type: 'git',
-      url: 'git+https://github.com/nipe-solutions/react-swipe-actions.git',
+      url: 'https://github.com/NIPE-Solutions/react-swipe-actions',
     },
     publishConfig: { access: 'public', provenance: true, tag: 'alpha' },
   }

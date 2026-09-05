@@ -30,7 +30,7 @@ test('package metadata points to the approved GitHub repository', async () => {
 
   assert.deepEqual(packageJson.repository, {
     type: 'git',
-    url: 'git+https://github.com/nipe-solutions/react-swipe-actions.git',
+    url: 'https://github.com/NIPE-Solutions/react-swipe-actions',
   })
 })
 

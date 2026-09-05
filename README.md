@@ -115,6 +115,6 @@ list lifecycle features.
   [architecture](docs/architecture.md)
 - [Performance evidence](docs/performance.md), [contributing](CONTRIBUTING.md),
   [security reporting](SECURITY.md), and [release procedure](docs/RELEASING.md)
-- [GitHub repository](https://github.com/nipe-solutions/react-swipe-actions)
+- [GitHub repository](https://github.com/NIPE-Solutions/react-swipe-actions)
 
 This project is licensed under the [MIT License](LICENSE).

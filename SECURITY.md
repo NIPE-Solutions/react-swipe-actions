@@ -10,7 +10,7 @@ is supported.
 ## Reporting a vulnerability
 
 Please do not open a public issue for a suspected vulnerability. Use GitHub's
-[private vulnerability reporting form](https://github.com/nipe-solutions/react-swipe-actions/security/advisories/new)
+[private vulnerability reporting form](https://github.com/NIPE-Solutions/react-swipe-actions/security/advisories/new)
 and include the affected revision or package version, a minimal reproduction,
 impact, and any mitigation you know. Do not include credentials, access tokens,
 or private user data.

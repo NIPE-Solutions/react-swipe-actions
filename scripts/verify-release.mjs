@@ -20,7 +20,7 @@ const execFileAsync = promisify(execFile)
 const repositoryRoot = path.resolve(import.meta.dirname, '..')
 const expectedName = '@nipe-solutions/react-swipe-actions'
 const expectedRepository =
-  'git+https://github.com/nipe-solutions/react-swipe-actions.git'
+  'https://github.com/NIPE-Solutions/react-swipe-actions'
 const semverPrerelease =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
 

@@ -102,7 +102,7 @@ controlled or default open state. Keep server and first-client state consistent.
 Support targets the current and previous major Chrome/Chromium, Edge, Firefox,
 and Safari releases, plus modern Chrome Android and Mobile Safari. It requires
 Pointer Events, `ResizeObserver`, animation frames, CSS custom properties, and
-logical properties. v1 is an alpha and intentionally excludes generic gesture
+logical properties. The 1.x contract intentionally excludes generic gesture
 hooks, nested swipe roots, portals, React Native, `asChild`, and application
 list lifecycle features.
 

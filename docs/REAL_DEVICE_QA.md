@@ -5,11 +5,12 @@ An unchecked manual item is pending, not an implied pass.
 
 ## Automated coverage
 
-CI exercises Chromium, Firefox, and WebKit with real browser pointer sequences.
-It covers horizontal intent, vertical-scroll arbitration, slow and fast release,
-pause before release, direction reversal, full-swipe activation and cancellation,
-re-grab during settle, group handoff, interactive children, keyboard disclosure,
-RTL, reduced motion, resize, pointer cancellation, and accessibility scans.
+CI exercises Chromium, Firefox, and WebKit with browser pointer sequences. It
+covers horizontal intent, vertical-scroll arbitration, slow and fast release,
+pause before release, direction reversal, full-swipe activation and
+cancellation, re-grab during settle, group handoff, interactive children,
+keyboard disclosure, RTL, reduced motion, resize, pointer cancellation, and axe
+accessibility scans.
 
 Desktop browser automation cannot faithfully reproduce OS navigation-edge
 gestures, device touch latency, orientation sensors, or assistive technology on
@@ -42,4 +43,6 @@ outside a nested scroll container.
 
 ## Manual verified
 
-No physical-device run has been recorded for this release candidate yet.
+No physical-device or human screen-reader run was performed for the 1.0.0
+release. The automated browser, keyboard, and axe results are the recorded
+release evidence; they do not stand in for the unchecked manual items above.

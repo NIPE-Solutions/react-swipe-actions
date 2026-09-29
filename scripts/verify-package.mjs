@@ -130,6 +130,10 @@ try {
         ...installPackages,
       ],
       consumer,
+      {
+        NPM_CONFIG_ALLOW_SCRIPTS: undefined,
+        npm_config_allow_scripts: undefined,
+      },
     )
 
     const installedPackage = JSON.parse(
@@ -258,15 +262,21 @@ function validatePackedFiles(files) {
   )
 }
 
-function run(command, args, cwd = repositoryRoot) {
+function run(command, args, cwd = repositoryRoot, environmentOverrides = {}) {
+  const environment = {
+    ...process.env,
+    npm_config_audit: 'false',
+    npm_config_fund: 'false',
+    npm_config_update_notifier: 'false',
+    ...environmentOverrides,
+  }
+  for (const [name, value] of Object.entries(environment)) {
+    if (value === undefined) delete environment[name]
+  }
+
   return execFileAsync(command, args, {
     cwd,
-    env: {
-      ...process.env,
-      npm_config_audit: 'false',
-      npm_config_fund: 'false',
-      npm_config_update_notifier: 'false',
-    },
+    env: environment,
     maxBuffer: 10 * 1024 * 1024,
   })
 }
@@ -315,6 +325,14 @@ async function validateSourceDocumentation() {
     changelog,
     /^## \[0\.1\.0-alpha\.0\] - \d{4}-\d{2}-\d{2}$/m,
     'CHANGELOG.md must contain the dated 0.1.0-alpha.0 section',
+  )
+  assert.match(
+    changelog,
+    new RegExp(
+      `^## \\[${escapeRegExp(packageJson.version)}\\] - \\d{4}-\\d{2}-\\d{2}$`,
+      'm',
+    ),
+    `CHANGELOG.md must contain a dated ${packageJson.version} section`,
   )
 
   const contributing = files.get('CONTRIBUTING.md')
@@ -440,6 +458,10 @@ function typescriptBlocks(source) {
   return [...source.matchAll(/```(?:tsx|ts)\r?\n([\s\S]*?)```/g)].map(
     ([, block]) => block,
   )
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 async function pathExists(target) {

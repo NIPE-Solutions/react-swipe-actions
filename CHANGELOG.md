@@ -2,6 +2,30 @@
 
 All notable changes are documented in this file.
 
+## [1.0.0] - 2026-09-29
+
+### Added
+
+- Declared the existing component, type, stylesheet, CSS-variable, data-attribute,
+  keyboard, logical-side, and controlled-state surfaces stable.
+- Added protected stable publication through the npm `latest` tag with OIDC
+  provenance, exact artifact validation, and a SHA-512 manifest.
+
+### Fixed
+
+- Isolated packed-consumer installs from unrelated npm script policy while
+  retaining caller registry and network configuration.
+- Updated the development-only `undici` resolution used through `jsdom` to a
+  patched version.
+
+### Verified
+
+- Rechecked React 18 and 19 consumers, ESM and CommonJS loading, TypeScript,
+  SSR and hydration, Vite, bundle budgets, and the public package inventory.
+- Ran the automated Chromium, Firefox, and WebKit interaction matrix together
+  with keyboard and axe coverage. No physical-device or human screen-reader
+  run is claimed for this release.
+
 ## [0.1.0-alpha.3] - 2026-09-05
 
 ### Fixed

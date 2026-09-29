@@ -1,7 +1,7 @@
 # Performance evidence
 
-This document records measured evidence for the alpha package. It is not a claim
-that every application or device will match these timings.
+This document records measured evidence for the package. It is not a claim that
+every application or device will match these timings.
 
 ## Fixture
 

@@ -192,7 +192,7 @@ async function verifyIdentityAndMetadata() {
     await readFile(path.join(repositoryRoot, 'package.json'), 'utf8'),
   )
   assert.equal(siteMetadata.version, packageJson.version)
-  assert.equal(siteMetadata.statusLabel, '0.1 alpha')
+  assert.equal(siteMetadata.statusLabel, '1.0 stable')
   assert.equal(siteMetadata.reactCompatibility, 'React 18.3 and 19')
 
   const mainSource = await readFile(path.join(sourceRoot, 'main.tsx'), 'utf8')

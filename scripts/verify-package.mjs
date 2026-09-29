@@ -130,6 +130,10 @@ try {
         ...installPackages,
       ],
       consumer,
+      {
+        NPM_CONFIG_ALLOW_SCRIPTS: undefined,
+        npm_config_allow_scripts: undefined,
+      },
     )
 
     const installedPackage = JSON.parse(
@@ -258,15 +262,21 @@ function validatePackedFiles(files) {
   )
 }
 
-function run(command, args, cwd = repositoryRoot) {
+function run(command, args, cwd = repositoryRoot, environmentOverrides = {}) {
+  const environment = {
+    ...process.env,
+    npm_config_audit: 'false',
+    npm_config_fund: 'false',
+    npm_config_update_notifier: 'false',
+    ...environmentOverrides,
+  }
+  for (const [name, value] of Object.entries(environment)) {
+    if (value === undefined) delete environment[name]
+  }
+
   return execFileAsync(command, args, {
     cwd,
-    env: {
-      ...process.env,
-      npm_config_audit: 'false',
-      npm_config_fund: 'false',
-      npm_config_update_notifier: 'false',
-    },
+    env: environment,
     maxBuffer: 10 * 1024 * 1024,
   })
 }

@@ -169,18 +169,34 @@ test('packed file allowlist rejects an unexpected dist file', async () => {
   }
 })
 
-test('packed package passes isolated React 18 and React 19 consumers', async () => {
-  const { stdout, stderr } = await execFileAsync(
-    process.execPath,
-    ['scripts/verify-package.mjs'],
-    {
-      cwd: repositoryRoot,
-      maxBuffer: 10 * 1024 * 1024,
-    },
-  )
+test('packed consumers ignore unrelated npm script policy', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'swipe-actions-npm-'))
+  const userConfig = path.join(directory, 'npmrc')
 
-  assert.equal(stderr, '')
-  assert.match(stdout, /React 18\.3\.1: ESM, CJS, types, SSR passed/)
-  assert.match(stdout, /React 19\.2\.8: ESM, CJS, types, SSR, and Vite passed/)
-  assert.match(stdout, /Packed package verification passed/)
+  try {
+    await writeFile(userConfig, 'allow-scripts=@example/unrelated-tool\n')
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      ['scripts/verify-package.mjs'],
+      {
+        cwd: repositoryRoot,
+        env: {
+          ...process.env,
+          NPM_CONFIG_USERCONFIG: userConfig,
+          npm_config_allow_scripts: '@example/unrelated-tool',
+        },
+        maxBuffer: 10 * 1024 * 1024,
+      },
+    )
+
+    assert.equal(stderr, '')
+    assert.match(stdout, /React 18\.3\.1: ESM, CJS, types, SSR passed/)
+    assert.match(
+      stdout,
+      /React 19\.2\.8: ESM, CJS, types, SSR, and Vite passed/,
+    )
+    assert.match(stdout, /Packed package verification passed/)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
 })

@@ -1,6 +1,6 @@
 {
   "name": "@nipe-solutions/react-swipe-actions",
-  "version": "0.1.0-alpha.3",
+  "version": "1.0.0",
   "description": "Composable swipe actions for React.",
   "license": "MIT",
   "repository": {
@@ -14,7 +14,7 @@
   "publishConfig": {
     "access": "public",
     "provenance": true,
-    "tag": "alpha"
+    "tag": "latest"
   },
   "type": "module",
   "engines": {
@@ -55,7 +55,7 @@
     "verify:website:browser": "node scripts/verify-website.mjs",
     "test:api": "node scripts/check-public-api.mjs",
     "test:size": "node scripts/check-bundle-size.mjs",
-    "test:package": "npm run build:dist && node --test test/package/verify-package.test.mjs",
+    "test:package": "npm run build:dist && node --test test/package/foundation.test.mjs test/package/verify-package.test.mjs",
     "test:workflows": "node --test scripts/verify-workflows.test.mjs",
     "test:clean-check": "node --test scripts/verify-clean-check.test.mjs",
     "release:check": "node scripts/verify-release.mjs",

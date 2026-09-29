@@ -1,9 +1,9 @@
 # Contributing
 
 Issues and pull requests are welcome for reproducible defects, documentation,
-tests, and focused improvements to the public contract. The package is in an
-alpha phase; discuss a new public API or broad interaction model before writing
-an implementation.
+tests, and focused improvements to the public contract. Discuss a new public API
+or broad interaction model before writing an implementation; compatibility is
+maintained within the current major release.
 
 ## Local setup
 
@@ -42,9 +42,9 @@ not install or run the browser matrix.
   evidence. Physical directions are browser behavior, not public state.
 - Include documentation updates when the exported API, CSS contract, browser
   policy, or limitations change.
-- No Changesets integration is configured for this alpha. Describe the
-  user-visible changelog entry in the pull request; maintainers update
-  [CHANGELOG.md](CHANGELOG.md) when preparing a release.
+- Describe the user-visible changelog entry in the pull request. Maintainers
+  update [CHANGELOG.md](CHANGELOG.md) while preparing a release; the repository
+  does not use Changesets.
 
 ## Review evidence
 

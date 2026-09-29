@@ -21,8 +21,7 @@ const repositoryRoot = path.resolve(import.meta.dirname, '..')
 const expectedName = '@nipe-solutions/react-swipe-actions'
 const expectedRepository =
   'https://github.com/NIPE-Solutions/react-swipe-actions'
-const semverPrerelease =
-  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
+const semverStable = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
 
 export function validateReleaseMetadata(packageJson, changelog) {
   assert.equal(packageJson.name, expectedName, 'Unexpected package name')
@@ -32,15 +31,12 @@ export function validateReleaseMetadata(packageJson, changelog) {
     'Unexpected package repository',
   )
 
-  const match = semverPrerelease.exec(packageJson.version)
+  const match = semverStable.exec(packageJson.version)
   assert.ok(
     match,
-    `Package version ${packageJson.version} must be a semantic prerelease`,
+    `Package version ${packageJson.version} must be a stable semantic version`,
   )
-  const channel = match[4].split('.')[0]
-  if (match[1] === '0' && match[2] === '1') {
-    assert.equal(channel, 'alpha', '0.1 prereleases must use the alpha channel')
-  }
+  const channel = 'latest'
   assert.match(
     changelog,
     new RegExp(
@@ -62,7 +58,7 @@ export function validateReleaseMetadata(packageJson, changelog) {
   assert.equal(
     packageJson.publishConfig?.tag,
     channel,
-    `publishConfig dist-tag must match prerelease channel ${channel}`,
+    `publishConfig dist-tag must be ${channel}`,
   )
 
   return { name: packageJson.name, version: packageJson.version, channel }
@@ -231,7 +227,7 @@ export async function verifyRelease({ dryRun = false, outputDirectory } = {}) {
   for (const message of contextMessages) console.log(message)
 
   console.log(`Release candidate: ${release.name}@${release.version}`)
-  console.log(`Prerelease channel: ${release.channel}`)
+  console.log(`Release channel: ${release.channel}`)
 
   await runVisible('npm', ['run', 'build:dist'])
   await runVisible('npm', ['run', 'test:size'])

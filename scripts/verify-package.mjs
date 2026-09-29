@@ -326,6 +326,14 @@ async function validateSourceDocumentation() {
     /^## \[0\.1\.0-alpha\.0\] - \d{4}-\d{2}-\d{2}$/m,
     'CHANGELOG.md must contain the dated 0.1.0-alpha.0 section',
   )
+  assert.match(
+    changelog,
+    new RegExp(
+      `^## \\[${escapeRegExp(packageJson.version)}\\] - \\d{4}-\\d{2}-\\d{2}$`,
+      'm',
+    ),
+    `CHANGELOG.md must contain a dated ${packageJson.version} section`,
+  )
 
   const contributing = files.get('CONTRIBUTING.md')
   assert.ok(contributing, 'CONTRIBUTING.md must be readable')
@@ -450,6 +458,10 @@ function typescriptBlocks(source) {
   return [...source.matchAll(/```(?:tsx|ts)\r?\n([\s\S]*?)```/g)].map(
     ([, block]) => block,
   )
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 async function pathExists(target) {

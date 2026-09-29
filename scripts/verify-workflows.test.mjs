@@ -130,7 +130,7 @@ function validateReleaseWorkflow(workflow) {
   assert.equal(workflow.on.workflow_dispatch.inputs.confirm.required, true)
   assert.equal(
     workflow.concurrency.group,
-    'npm-nipe-solutions-react-swipe-actions-alpha',
+    'npm-nipe-solutions-react-swipe-actions-stable',
   )
   assert.doesNotMatch(workflow.concurrency.group, /github\.(ref|sha)/)
   assert.equal(workflow.concurrency['cancel-in-progress'], false)
@@ -188,7 +188,7 @@ function validateReleaseWorkflow(workflow) {
     stepsFor(verify).indexOf(uploadStep) >
       stepsFor(verify).indexOf(releaseStep),
   )
-  assert.equal(uploadStep.with.name, 'npm-package-alpha')
+  assert.equal(uploadStep.with.name, 'npm-package-stable')
   assert.equal(uploadStep.with.path, 'release-artifact')
   assert.equal(uploadStep.with['if-no-files-found'], 'error')
   assert.ok(uploadStep.with['retention-days'] <= 3)
@@ -209,7 +209,7 @@ function validateReleaseWorkflow(workflow) {
   const downloadStep = publishSteps.find((step) =>
     step.uses?.startsWith('actions/download-artifact@'),
   )
-  assert.equal(downloadStep?.with?.name, 'npm-package-alpha')
+  assert.equal(downloadStep?.with?.name, 'npm-package-stable')
   assert.equal(downloadStep?.with?.path, 'release-artifact')
 
   const protectedStep = publishSteps.at(-1)
@@ -228,7 +228,7 @@ function validateReleaseWorkflow(workflow) {
     /\$\{\{[^}]*needs\.[^}]*outputs/,
     'OIDC shell must not interpolate job outputs directly',
   )
-  assert.match(protectedStep.run, /RELEASE_CHANNEL.*alpha/)
+  assert.match(protectedStep.run, /RELEASE_CHANNEL.*latest/)
   assert.ok(protectedStep.run.includes(releaseTarball))
   assert.match(protectedStep.run, /\^\[A-Za-z0-9\._-\]\+\$/)
   assert.match(protectedStep.run, /exactly one entry/)
@@ -401,7 +401,7 @@ test('release policy rejects ref-scoped publication concurrency', async () => {
 
   assert.throws(
     () => validateReleaseWorkflow(workflow),
-    /npm-nipe-solutions-react-swipe-actions-alpha/,
+    /npm-nipe-solutions-react-swipe-actions-stable/,
   )
 })
 
@@ -433,46 +433,39 @@ test('Dependabot updates npm and Actions monthly with grouped non-majors', async
   })
 })
 
-test('release metadata requires the approved prerelease identity and provenance', async () => {
+test('release metadata requires a stable version and provenance', async () => {
   const { validateReleaseMetadata } = await import('./verify-release.mjs')
   const packageJson = {
     name: '@nipe-solutions/react-swipe-actions',
-    version: '0.1.0-alpha.0',
+    version: '1.0.0',
     repository: {
       type: 'git',
       url: 'https://github.com/NIPE-Solutions/react-swipe-actions',
     },
-    publishConfig: { access: 'public', provenance: true, tag: 'alpha' },
+    publishConfig: { access: 'public', provenance: true, tag: 'latest' },
   }
-  const changelog = '# Changelog\n\n## [0.1.0-alpha.0] - 2026-09-05\n'
+  const changelog = '# Changelog\n\n## [1.0.0] - 2026-09-29\n'
 
   assert.deepEqual(validateReleaseMetadata(packageJson, changelog), {
     name: '@nipe-solutions/react-swipe-actions',
-    version: '0.1.0-alpha.0',
-    channel: 'alpha',
+    version: '1.0.0',
+    channel: 'latest',
   })
 
   assert.throws(
     () =>
       validateReleaseMetadata(
         packageJson,
-        '# Changelog\n\n## [0.1.0-alpha.0] - Unreleased\n',
+        '# Changelog\n\n## [1.0.0] - Unreleased\n',
       ),
     /dated release entry/,
   )
-  assert.throws(
-    () =>
-      validateReleaseMetadata({ ...packageJson, version: '0.1.0' }, changelog),
-    /must be a semantic prerelease/,
-  )
-  assert.throws(
-    () =>
-      validateReleaseMetadata(
-        { ...packageJson, version: '0.1.0-alpha.01' },
-        changelog,
-      ),
-    /must be a semantic prerelease/,
-  )
+  for (const version of ['1.0.0-rc.1', '1.0.0+build.1', '01.0.0']) {
+    assert.throws(
+      () => validateReleaseMetadata({ ...packageJson, version }, changelog),
+      /must be a stable semantic version/,
+    )
+  }
   assert.throws(
     () =>
       validateReleaseMetadata(
@@ -486,27 +479,15 @@ test('release metadata requires the approved prerelease identity and provenance'
       validateReleaseMetadata(
         {
           ...packageJson,
-          publishConfig: { ...packageJson.publishConfig, tag: 'latest' },
+          publishConfig: { ...packageJson.publishConfig, tag: 'beta' },
         },
         changelog,
       ),
-    /dist-tag.*alpha/,
-  )
-  assert.throws(
-    () =>
-      validateReleaseMetadata(
-        {
-          ...packageJson,
-          version: '0.1.0-beta.0',
-          publishConfig: { ...packageJson.publishConfig, tag: 'beta' },
-        },
-        '# Changelog\n\n## [0.1.0-beta.0] - 2026-09-05\n',
-      ),
-    /0\.1 prereleases must use the alpha channel/,
+    /dist-tag.*latest/,
   )
   assert.throws(
     () => validateReleaseMetadata(packageJson, '# Changelog\n'),
-    /CHANGELOG\.md.*0\.1\.0-alpha\.0/,
+    /CHANGELOG\.md.*1\.0\.0/,
   )
 })
 
@@ -643,7 +624,7 @@ test('protected release shell treats output mutation payloads only as data', asy
           env: {
             ...process.env,
             RELEASE_TARBALL: payload,
-            RELEASE_CHANNEL: 'alpha',
+            RELEASE_CHANNEL: 'latest',
           },
         }),
         (error) => {
@@ -660,11 +641,11 @@ test('protected release shell treats output mutation payloads only as data', asy
         env: {
           ...process.env,
           RELEASE_TARBALL: releaseTarball,
-          RELEASE_CHANNEL: 'alpha\n$(touch injection-ran)',
+          RELEASE_CHANNEL: 'latest\n$(touch injection-ran)',
         },
       }),
       (error) => {
-        assert.match(error.stderr, /release channel must be alpha/i)
+        assert.match(error.stderr, /release channel must be latest/i)
         return true
       },
     )
@@ -697,7 +678,7 @@ test('protected release shell rejects extra or mismatched checksum entries', asy
         env: {
           ...process.env,
           RELEASE_TARBALL: tarball,
-          RELEASE_CHANNEL: 'alpha',
+          RELEASE_CHANNEL: 'latest',
         },
       }),
       (error) => {
@@ -713,7 +694,7 @@ test('protected release shell rejects extra or mismatched checksum entries', asy
         env: {
           ...process.env,
           RELEASE_TARBALL: tarball,
-          RELEASE_CHANNEL: 'alpha',
+          RELEASE_CHANNEL: 'latest',
         },
       }),
       (error) => {

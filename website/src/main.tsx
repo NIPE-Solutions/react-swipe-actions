@@ -560,7 +560,7 @@ function Website() {
           <details>
             <summary>Can roots be nested?</summary>
             <p>
-              No. Nested swipe roots are outside the alpha contract and may
+              No. Nested swipe roots are outside the package contract and may
               compete for a pointer.
             </p>
           </details>

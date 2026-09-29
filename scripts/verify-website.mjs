@@ -150,8 +150,8 @@ try {
   )
   assert.equal(
     (await page.locator('.status-line small').textContent())?.trim(),
-    '0.1 alpha',
-    'The package prerelease status is visible beside the hero identity',
+    '1.0 stable',
+    'The stable package status is visible beside the hero identity',
   )
   assert.equal(
     await page.locator('.site-footer__links a').count(),

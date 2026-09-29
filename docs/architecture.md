@@ -234,11 +234,12 @@ content layer because JavaScript owns direct drag and settle coordinates.
 
 ## Limitations
 
-The alpha does not provide row removal, undo, confirmation, async state, generic
-gesture hooks, virtualization, portals, drag and drop, `asChild`, React Native,
-or nested swipe roots. It has no runtime integration dependency for dialogs,
-drawers, or Bottom Sheet components. Those containers must allow vertical pan
-ownership and should be tested with their actual gesture configuration.
+The package does not provide row removal, undo, confirmation, async state,
+generic gesture hooks, virtualization, portals, drag and drop, `asChild`, React
+Native, or nested swipe roots. It has no runtime integration dependency for
+dialogs, drawers, or Bottom Sheet components. Those containers must allow
+vertical pan ownership and should be tested with their actual gesture
+configuration.
 
 Performance cost currently scales with rendered rows and observed elements.
 Applications with very large datasets should virtualize at the list layer. CSS
@@ -262,10 +263,11 @@ keyboard/focus, RTL, reduced motion, SSR import/rendering, browser interaction,
 package consumers, and CSS/API boundaries.
 
 Manual checks are recorded separately and are never implied by an automated
-pass. In particular, OS browser back-edge gestures on physical Mobile Safari and
-Chrome Android require device testing because desktop automation cannot
-faithfully reproduce navigation-edge ownership. Bottom Sheet integrations also
-need checks against the consuming sheet version and configuration.
+pass. No physical-device or human screen-reader run is part of the 1.0.0 release
+record. OS browser back-edge gestures on physical Mobile Safari and Chrome
+Android require device testing because desktop automation cannot faithfully
+reproduce navigation-edge ownership. Bottom Sheet integrations also need checks
+against the consuming sheet version and configuration.
 
 ### Native-feel interaction matrix
 

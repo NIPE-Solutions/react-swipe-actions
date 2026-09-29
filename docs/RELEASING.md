@@ -12,14 +12,14 @@ procedure for later versions.
 ## Preconditions
 
 - Use Node.js 24 and npm 11.19.0 with a clean, reviewed worktree.
-- Confirm the intended version, prerelease tag, and matching unreleased entry
-  in [CHANGELOG.md](../CHANGELOG.md).
+- Confirm the intended version, npm dist-tag, and matching dated entry in
+  [CHANGELOG.md](../CHANGELOG.md).
 - Confirm package metadata, exports, license, and repository links still match
   the [public API](../README.md) and [architecture](architecture.md).
 - Review the current and previous browser-major policy in
-  [architecture](architecture.md#browser-policy), including any manual
-  mobile-edge and container evidence that automated desktop browsers cannot
-  establish.
+  [architecture](architecture.md#browser-policy). Record manual mobile-edge,
+  screen-reader, and container evidence when available; do not infer it from
+  desktop automation.
 
 Install and run the quality evidence:
 
@@ -37,7 +37,7 @@ Build and inspect the exact tarball contents before release automation uses it:
 ```bash
 npm run build:dist
 npm pack --json
-tar -tf nipe-solutions-react-swipe-actions-0.1.0-alpha.3.tgz
+tar -tf nipe-solutions-react-swipe-actions-1.0.0.tgz
 npm publish --dry-run --provenance --access public
 ```
 
@@ -61,6 +61,6 @@ bypass a missing trusted-publisher configuration. Record the workflow run,
 published version, provenance link, tarball inventory, browser evidence, and
 any manual-device checks with the release record.
 
-Each prerelease is published only after a maintainer explicitly approves the
-release, confirms the protected environment and triggers the workflow. Until
-then, this guide remains a review procedure and dry-run checklist.
+Each release is published only after a maintainer explicitly approves it,
+confirms the protected environment, and triggers the workflow. Until then, this
+guide remains a review procedure and dry-run checklist.

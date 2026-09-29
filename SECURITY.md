@@ -2,10 +2,9 @@
 
 ## Supported versions
 
-Security fixes are evaluated for the current `0.1.0-alpha.0` development line.
-Older prereleases are not supported. This policy describes the repository before
-the first npm publication; it does not claim that an unlisted registry version
-is supported.
+Security fixes are evaluated for the current `1.x` release line. Prereleases and
+superseded release lines are not supported unless a security advisory states
+otherwise.
 
 ## Reporting a vulnerability
 

@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: npm-nipe-solutions-react-swipe-actions-alpha
+  group: npm-nipe-solutions-react-swipe-actions-stable
   cancel-in-progress: false
 
 jobs:
@@ -55,7 +55,7 @@ jobs:
       - name: Upload verified release artifact
         uses: actions/upload-artifact@v7
         with:
-          name: npm-package-alpha
+          name: npm-package-stable
           path: release-artifact
           if-no-files-found: error
           retention-days: 3
@@ -77,7 +77,7 @@ jobs:
       - name: Download verified release artifact
         uses: actions/download-artifact@v7
         with:
-          name: npm-package-alpha
+          name: npm-package-stable
           path: release-artifact
       - name: Validate and publish verified artifact
         env:
@@ -87,12 +87,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "$RELEASE_CHANNEL" != "alpha" ]]; then
-            echo "Release channel must be alpha" >&2
+          if [[ "$RELEASE_CHANNEL" != "latest" ]]; then
+            echo "Release channel must be latest" >&2
             exit 1
           fi
 
-          expected_tarball="nipe-solutions-react-swipe-actions-0.1.0-alpha.3.tgz"
+          expected_tarball="nipe-solutions-react-swipe-actions-1.0.0.tgz"
           if [[ ! "$RELEASE_TARBALL" =~ ^[A-Za-z0-9._-]+$ ]] || [[ "$RELEASE_TARBALL" != "$expected_tarball" ]]; then
             echo "Unsafe release tarball: expected $expected_tarball" >&2
             exit 1

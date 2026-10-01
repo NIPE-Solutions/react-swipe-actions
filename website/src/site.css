@@ -201,6 +201,7 @@ main {
 }
 
 .opening,
+.support-cta,
 .doc-section,
 .site-footer {
   inline-size: min(100% - 64px, 1120px);
@@ -220,6 +221,62 @@ main {
   grid-column: 1;
   grid-row: 1;
   min-inline-size: 0;
+}
+
+.support-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  padding-block: 28px;
+  border-block: 1px solid var(--rule);
+}
+
+.support-cta__copy {
+  flex: 1 1 420px;
+  min-inline-size: 0;
+}
+
+.support-cta h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 720;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+}
+
+.support-cta p {
+  max-inline-size: 60ch;
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.support-cta__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.support-cta__actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  color: var(--signal-dark);
+  font-size: 14px;
+  font-weight: 690;
+  text-decoration: none;
+}
+
+.support-cta__actions .support-cta__primary {
+  border-color: var(--signal-dark);
+  background: var(--signal-dark);
+  color: var(--paper);
 }
 
 .intro {
@@ -1359,6 +1416,7 @@ kbd {
     padding-inline: 18px;
   }
   .opening,
+  .support-cta,
   .doc-section,
   .site-footer {
     inline-size: min(100% - 40px, 920px);
@@ -1453,6 +1511,7 @@ kbd {
     white-space: nowrap;
   }
   .opening,
+  .support-cta,
   .doc-section,
   .site-footer {
     inline-size: min(100% - 32px, 680px);
@@ -1510,6 +1569,7 @@ kbd {
 
 @media (max-width: 580px) {
   .opening,
+  .support-cta,
   .doc-section,
   .site-footer {
     inline-size: min(100% - 24px, 520px);

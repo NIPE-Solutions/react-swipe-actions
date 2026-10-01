@@ -40,6 +40,8 @@ jobs:
         run: npm run verify:website:browser
       - name: Test Chromium
         run: npm run test:e2e -- --project=chromium --reporter=line,html
+      - name: Test website support links
+        run: npx playwright test --config playwright.website.config.ts --project=chromium --reporter=line,html
       - name: Upload Chromium failure evidence
         if: failure()
         uses: actions/upload-artifact@v7
@@ -73,8 +75,12 @@ jobs:
           restore-keys: ${{ runner.os }}-playwright-firefox-
       - name: Install Firefox
         run: npx playwright install --with-deps firefox
+      - name: Build website
+        run: npm run build:website
       - name: Test Firefox
         run: npm run test:e2e -- --project=firefox --reporter=line,html
+      - name: Test website support links
+        run: npx playwright test --config playwright.website.config.ts --project=firefox --reporter=line,html
       - name: Upload Firefox failure evidence
         if: failure()
         uses: actions/upload-artifact@v7
@@ -108,8 +114,12 @@ jobs:
           restore-keys: ${{ runner.os }}-playwright-webkit-
       - name: Install WebKit
         run: npx playwright install --with-deps webkit
+      - name: Build website
+        run: npm run build:website
       - name: Test WebKit
         run: npm run test:e2e -- --project=webkit --reporter=line,html
+      - name: Test website support links
+        run: npx playwright test --config playwright.website.config.ts --project=webkit --reporter=line,html
       - name: Upload WebKit failure evidence
         if: failure()
         uses: actions/upload-artifact@v7

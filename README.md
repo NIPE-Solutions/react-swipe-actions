@@ -1,24 +1,26 @@
 # React Swipe Actions
 
-Composable React rows that reveal measured leading and trailing actions while the
-application keeps ownership of list data and side effects.
+Reveal Archive, Delete, or other actions beside React inbox, task, or saved-item
+rows, keeping secondary actions close to their content.
 
-`@nipe-solutions/react-swipe-actions` supplies the row interaction: pointer
-arbitration, keyboard behavior, focus handling, logical RTL sides, and optional
-full-swipe activation. It is not a generic swipe-detection hook and does not
-own a swipe list, row removal, undo, confirmation, async mutations, or
-virtualization.
+Measured buttons, scroll arbitration, and keyboard disclosure come with the
+row. Your application owns data, requests, confirmation, undo, and removal.
 
-## Install
+[Live demos and docs](https://react-swipe-actions.nipesolutions.com) ·
+[npm](https://www.npmjs.com/package/@nipe-solutions/react-swipe-actions) ·
+[GitHub](https://github.com/NIPE-Solutions/react-swipe-actions)
+
+## Install and build a row
 
 ```bash
 npm install @nipe-solutions/react-swipe-actions
 ```
 
-React 18.3 or 19 and the matching `react-dom` version are peer dependencies.
-The package has no runtime dependencies.
+Supports React 18.3 and React 19 with matching `react-dom` peers and no additional
+runtime dependencies.
 
-## Start with the row API
+Pass application callbacks and keep ordinary buttons available. `styles.css`
+includes mechanics and a neutral theme.
 
 ```tsx
 import {
@@ -28,22 +30,33 @@ import {
   Root,
   Trailing,
 } from '@nipe-solutions/react-swipe-actions'
-import '@nipe-solutions/react-swipe-actions/core.css'
+import '@nipe-solutions/react-swipe-actions/styles.css'
 
 interface MessageRowProps {
+  subject: string
   onArchive: () => void
   onDelete: () => void
 }
 
-export function MessageRow({ onArchive, onDelete }: MessageRowProps) {
+export function MessageRow({ subject, onArchive, onDelete }: MessageRowProps) {
   return (
-    <Root aria-label="Quarterly planning actions">
+    <Root aria-label={`${subject} actions`}>
       <Leading>
-        <Action onAction={onArchive}>Archive</Action>
+        <Action fullSwipe onAction={onArchive}>
+          Archive
+        </Action>
       </Leading>
-      <Content>Quarterly planning</Content>
+      <Content style={{ padding: '1rem' }}>
+        <p>{subject}</p>
+        <button type="button" onClick={onArchive}>
+          Archive
+        </button>
+        <button type="button" onClick={onDelete}>
+          Delete
+        </button>
+      </Content>
       <Trailing>
-        <Action destructive fullSwipe onAction={onDelete}>
+        <Action destructive onAction={onDelete}>
           Delete
         </Action>
       </Trailing>
@@ -52,69 +65,56 @@ export function MessageRow({ onArchive, onDelete }: MessageRowProps) {
 }
 ```
 
-Import `core.css` for required positioning, transforms, and vertical-pan
-behavior. Then either add product presentation yourself, import `theme.css`
-after core for neutral defaults, or import `styles.css` for their combined
-equivalent.
+`Action` renders a native button. Here `fullSwipe` lets a committed full swipe
+invoke Archive; Delete requires button activation. `destructive` is a styling
+marker, not confirmation. Handle failed requests, confirmation, or undo yourself.
 
-```tsx
-import '@nipe-solutions/react-swipe-actions/core.css'
-import '@nipe-solutions/react-swipe-actions/theme.css'
+## Disclosure and keyboard access
 
-// Or: import '@nipe-solutions/react-swipe-actions/styles.css'
+Root supports controlled or uncontrolled state. `leading` and `trailing` follow
+LTR/RTL. `Group` closes the previously open sibling; see
+[application patterns](docs/guides/application-patterns.md) for state and grouping.
+
+Label each Root. ArrowLeft/ArrowRight reveal physical edges on the focused root;
+Escape closes. Hidden actions leave the accessibility tree and tab order.
+
+See [interaction and accessibility](docs/guides/interaction-accessibility.md)
+for scrolling, focus, and reduced motion.
+
+## Styling and boundaries
+
+For custom presentation, import `core.css`; `theme.css` adds neutral defaults.
+Keep core's `touch-action: pan-y`, avoid competing Content transform transitions,
+and preserve hidden-action semantics.
+See [styling and containers](docs/guides/styling-and-containers.md).
+
+This primitive does not manage lists, virtualization, or removal. Generic swipe
+hooks, nested roots, `asChild`, and React Native are outside its scope.
+
+Server rendering reflects the supplied controlled or default open state.
+Keep server and first-client state consistent.
+
+Requires modern browser APIs, including Pointer Events and `ResizeObserver`.
+
+Automated Chromium, Firefox, and WebKit checks cover gestures, keyboard, RTL,
+reduced motion, and axe scans. No physical-device or human screen-reader run was
+performed for 1.0.0. Phone touch and OS back-edge behavior need separate checks:
+see [real-device QA](docs/REAL_DEVICE_QA.md).
+
+## Development
+
+Requires Node 24 and npm 11.
+
+```bash
+npm install
+npm run check
+npm run test:e2e
 ```
 
-## State, accessibility, and platforms
+[Getting started](docs/guides/getting-started.md) ·
+[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) ·
+[NIPE Open Source](https://opensource.nipesolutions.com)
 
-An uncontrolled row owns its initial side:
+## License
 
-```tsx
-<Root defaultOpenSide="trailing">{/* sides and content */}</Root>
-```
-
-A controlled row asks the application to change its logical side:
-
-```tsx
-import { useState } from 'react'
-import {
-  Root,
-  type SwipeActionsOpenSide,
-} from '@nipe-solutions/react-swipe-actions'
-
-export function ControlledRow() {
-  const [openSide, setOpenSide] = useState<SwipeActionsOpenSide>(null)
-
-  return (
-    <Root openSide={openSide} onOpenSideChange={setOpenSide}>
-      {/* sides and content */}
-    </Root>
-  )
-}
-```
-
-Use `Group` to close the previously open sibling; keep data, requests, undo,
-and removal in the application. Roots use `leading` and `trailing` state in
-both LTR and RTL. Give each actionable row an accessible label; ArrowLeft and
-ArrowRight open physical edges, Escape closes, and inactive actions leave the
-tab order. Imports are SSR-safe, and server rendering reflects the supplied
-controlled or default open state. Keep server and first-client state consistent.
-
-Support targets the current and previous major Chrome/Chromium, Edge, Firefox,
-and Safari releases, plus modern Chrome Android and Mobile Safari. It requires
-Pointer Events, `ResizeObserver`, animation frames, CSS custom properties, and
-logical properties. The 1.x contract intentionally excludes generic gesture
-hooks, nested swipe roots, portals, React Native, `asChild`, and application
-list lifecycle features.
-
-## Read more
-
-- [Getting started](docs/guides/getting-started.md) and
-  [styling/container guidance](docs/guides/styling-and-containers.md)
-- [Interaction and accessibility](docs/guides/interaction-accessibility.md),
-  [application patterns](docs/guides/application-patterns.md), and
-  [architecture](docs/architecture.md)
-- [Performance evidence](docs/performance.md), [contributing](CONTRIBUTING.md),
-  [security reporting](SECURITY.md), and [release procedure](docs/RELEASING.md)
-- [GitHub repository](https://github.com/NIPE-Solutions/react-swipe-actions)
-
-This project is licensed under the [MIT License](LICENSE).
+[MIT](LICENSE)

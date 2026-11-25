@@ -10,15 +10,10 @@ export function DocsShell({ children }: { children: ReactNode }) {
         Skip to documentation
       </a>
       <aside className="docs-rail">
-        <a
-          className="wordmark"
-          href="#introduction"
-          aria-label="React Swipe Actions home"
-        >
+        <a className="wordmark" href="#introduction">
           <ProjectMark />
           <span>
-            React
-            <strong>Swipe Actions</strong>
+            React <strong>Swipe Actions</strong>
           </span>
         </a>
         <nav aria-label="Documentation sections">
